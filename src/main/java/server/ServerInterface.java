@@ -1,9 +1,8 @@
 package server;
 
-import main.java.model.AcceptAck;
-import main.java.model.PrepareAck;
-import main.java.model.Result;
+import model.*;
 
+import java.io.FileInputStream;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
@@ -18,28 +17,35 @@ public interface ServerInterface extends Remote {
 
     AcceptAck participantsAccept(UUID transactionID, String request) throws RemoteException;
 
-    Result requestHandler(String args) throws RemoteException;
+    Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException;
 
-    Result onLogin(String args) throws RemoteException;
-    Result onLogout(String args) throws RemoteException;
+    CommitAck participantsCommit(UUID transactionID, CommitParams commitParams) throws RemoteException;
+
+    Result initDocument(String docName, User user) throws RemoteException;
+    Result initSection(int sectionNum, User user) throws RemoteException;
+
+    Result createUser(User user) throws RemoteException;
+
+    Result login(User user) throws RemoteException;
+    Result logout(User user) throws RemoteException;
 
     /**
      *
-     * @param args
+     * @param
      * @return
      * @throws RemoteException
      * @see "https://openhms.sourceforge.io/rmiio/"
      */
-    Result onEdit(String args) throws RemoteException;
-    Result onEditEnd(String args) throws RemoteException;
+    Result edit(User user, Request request) throws RemoteException;
+    Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException;
 
-    Result onCreate(String args) throws RemoteException;
+    Result createSection(User user, Request request) throws RemoteException;
 
-    Result onShowSection(String args) throws RemoteException;
-    Result onShowDocument(String args) throws RemoteException;
+    Result showSection(User user, Request request) throws RemoteException;
+    Result showDocumentContent(User user, Request request) throws RemoteException;
 
-    Result onList(String args) throws RemoteException;
+    Result listDocs(User user) throws RemoteException;
 
     // TODO: Since we are unfamiliar with the notification mechanism, please feel free to change/add the signatures
-    Result onShare(String args) throws RemoteException;
+    Result shareDoc(User user, Request request) throws RemoteException;
 }
