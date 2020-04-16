@@ -13,13 +13,11 @@ public interface ServerInterface extends Remote {
 
     PrepareAck participantsPrepare(UUID transactionID) throws RemoteException;
 
-    Result accept(UUID transactionID, String request) throws RemoteException;
+    Result accept(UUID transactionID) throws RemoteException;
 
-    AcceptAck participantsAccept(UUID transactionID, String request) throws RemoteException;
+    AcceptAck participantsAccept(UUID transactionID, CommitParams commitParams) throws RemoteException;
 
     Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException;
-
-    CommitAck participantsCommit(UUID transactionID, CommitParams commitParams) throws RemoteException;
 
     Result initDocument(String docName, User user) throws RemoteException;
     Result initSection(int sectionNum, User user) throws RemoteException;
@@ -44,7 +42,7 @@ public interface ServerInterface extends Remote {
     Result showSection(User user, Request request) throws RemoteException;
     Result showDocumentContent(User user, Request request) throws RemoteException;
 
-    Result listDocs(User user) throws RemoteException;
+    Result listOwnedDocs(User user) throws RemoteException;
 
     // TODO: Since we are unfamiliar with the notification mechanism, please feel free to change/add the signatures
     Result shareDoc(User user, Request request) throws RemoteException;

@@ -4,14 +4,25 @@ import java.io.FileInputStream;
 import java.io.Serializable;
 
 public class CommitParams implements Serializable {
-    User user;
+    private User user;
     // 1 stands for put, 0 stands for delete
     int type;
-    FileInputStream fileInputStream;
+    private FileInputStream fileInputStream;
 
-    String docNanme;
+    private String docNanme;
 
-    int sectionNum;
+    private int sectionNum;
 
-    int commitCode;
+    // 0: userDB, 1:aliveUserDB, 2:docDB
+    private int DBCode;
+
+    public CommitParams(User user, int type, FileInputStream fileInputStream, String docNanme,
+                        int sectionNum, int DBCode) {
+        this.user = user;
+        this.type = type;
+        this.fileInputStream = fileInputStream;
+        this.docNanme = docNanme;
+        this.sectionNum = sectionNum;
+        this.DBCode = DBCode;
+    }
 }
