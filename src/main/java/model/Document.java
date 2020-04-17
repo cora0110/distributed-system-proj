@@ -45,7 +45,7 @@ public class Document implements Serializable {
     return new Document(name, creator, sections);
   }
 
-  public Section getSection(int index) {
+  public Section getSectionByIndex(int index) {
     return sections.get(index);
   }
 
