@@ -1,5 +1,7 @@
 package model;
 
+import com.healthmarketscience.rmiio.RemoteInputStream;
+
 import java.io.Serializable;
 
 import lombok.Getter;
@@ -13,4 +15,5 @@ public class Request implements Serializable {
     private int sectionNum;
     private String token;
     private User targetUser;
+    private RemoteInputStream remoteInputStream;
 }
