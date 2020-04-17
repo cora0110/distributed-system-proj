@@ -310,6 +310,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     // TODO: ADD 2PC
     document.addAuthor(request.getTargetUser());
+    // TODO: 4/17/20 assign to other servers, shutdown hook
     return new Result(1, "Succeed");
     }
 
