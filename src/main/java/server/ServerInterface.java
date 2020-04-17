@@ -35,7 +35,7 @@ public interface ServerInterface extends Remote {
      * @see "https://openhms.sourceforge.io/rmiio/"
      */
     Result edit(User user, Request request) throws RemoteException;
-    Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException;
+    Result editEnd(User user, Request request) throws RemoteException;
 
     Result createDocument(User user, Request request) throws RemoteException;
 
