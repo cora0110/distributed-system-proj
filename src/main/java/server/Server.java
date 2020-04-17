@@ -5,12 +5,18 @@ import model.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Server implements ServerInterface {
+public class Server extends UnicastRemoteObject implements ServerInterface {
     public int port;
+    public String serverName;
+    private ServerLog serverLog;
     private DocumentDatabase documentDatabase;
     private AliveUserDatabase aliveUserDatabase;
     private UserDatabase userDatabase;
@@ -20,11 +26,27 @@ public class Server implements ServerInterface {
 
     private final String DATA_DIR = "./server_data" + port + "/";
 
-    public Server(int port) {
+    public Server(int port) throws RemoteException {
         this.port = port;
+        this.serverName = "Server" + port;
+        serverLog = new ServerLog();
         userDatabase = initUserDB();
         documentDatabase = initDocumentDB();
         aliveUserDatabase = new AliveUserDatabase();
+        bindRMI();
+    }
+
+    /**
+     * Binds RMI
+     */
+    public void bindRMI() {
+        try {
+            Registry registry = LocateRegistry.createRegistry(port);
+            registry.rebind(serverName, this);
+            serverLog.log(serverName+ " is running...");
+        } catch (Exception e) {
+            serverLog.log(e.getMessage());
+        }
     }
 
     @Override
@@ -187,6 +209,11 @@ public class Server implements ServerInterface {
     }
 
     @Override
+    public Result listOwnedDocs(User user) throws RemoteException {
+        return null;
+    }
+
+    @Override
     public Result listOwnedDocs(User user, Request request) throws RemoteException {
         if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
             return new Result(0, "Not logged in.");
@@ -227,6 +254,40 @@ public class Server implements ServerInterface {
 
         document.addModifier(request.getTargetUser());
         return new Result(1, "Succeed");
+    }
+
+    @Override
+    public void kill() throws RemoteException {
+        Registry registry = LocateRegistry.getRegistry(this.port);
+        try {
+            registry.unbind(this.serverName);
+        } catch (NotBoundException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public boolean restart( DocumentDatabase documentDatabase,
+                         AliveUserDatabase aliveUserDatabase,
+                         UserDatabase userDatabase) {
+        this.documentDatabase = documentDatabase;
+        this.aliveUserDatabase = aliveUserDatabase;
+        this.userDatabase = userDatabase;
+        return true;
+    }
+
+    @Override
+    public boolean helpRestartServer(int deadServerPort)  {
+        try {
+            Registry registry = LocateRegistry.getRegistry(deadServerPort);
+            ServerInterface stub = (ServerInterface) registry.lookup("Server" + deadServerPort);
+            stub.restart(this.documentDatabase, this.aliveUserDatabase, this.userDatabase);
+            return true;
+        } catch(Exception e) {
+            serverLog.log("Failed Restart Server! Exception: " + e.getMessage());
+        }
+        return false;
     }
 
     private UserDatabase initUserDB() {
