@@ -1,7 +1,10 @@
 package server;
 
+import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
+
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -11,6 +14,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import chat.ChatManager;
 import model.AcceptAck;
 import model.CommitParams;
 import model.Document;
@@ -124,7 +128,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
           return new Result(0, "Request aborted.");
         }
 
-        String token = aliveUserDatabase.getTokenbyUser(user);
+        String token = aliveUserDatabase.getTokenByUser(user.getUsername());
         if (token != null) {
           // TODO
 //          notificationThread = new NotiServerRunnable(user, socket.getInetAddress().getHostName(), (Integer) args[2]);
@@ -159,58 +163,58 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   }
 
-    //TODO: CDA manager not added here
-    @Override
-    public Result edit(User user, Request request) throws RemoteException {
-      if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-          return new Result(0, "Not logged in.");
-      }
-
-      if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-          return new Result(0, "User does not match token.");
-      }
-
-      Document document = documentDatabase.getDocumentByName(request.getDocName());
-      if (document == null) {
-          return new Result(0, "Document does not exist.");
-      }
-
-      if (!document.hasPermit(user)) {
-          return new Result(0, "You do not have access.");
-      }
-
-      Section section = document.getSection(request.getSectionNum());
-      if (section == null) {
-          return new Result(0, "Section does not exist.");
-      }
-
-      User editingUser = section.getOccupant();
-      if (editingUser != null) {
-          return new Result(0, "The section is being edited");
-      }
-
-      // set occupant to that section
-      CommitParams commitParams = new CommitParams(user, 2, null,
-              request.getDocName(), request.getSectionNum(), 2);
-      Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-
-      if (result.getStatus() == 0) {
-        return new Result(0, "Request aborted.");
-      }
-
-      try {
-          InputStream inputStream = new FileInputStream(section.getPath());
-          SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
-          return new Result(1, "Succeed", remoteInputStream);
-      } catch (IOException ioe) {
-          return new Result(0, "IO Exception while accessing the section");
-      }
+  //TODO: CDA manager not added here
+  @Override
+  public Result edit(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
     }
 
-    @Override
-    public Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException {
-        return null;
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
     }
+
+    Document document = documentDatabase.getDocumentByName(request.getDocName());
+    if (document == null) {
+      return new Result(0, "Document does not exist.");
+    }
+
+    if (!document.hasPermit(user)) {
+      return new Result(0, "You do not have access.");
+    }
+
+    Section section = document.getSection(request.getSectionNum());
+    if (section == null) {
+      return new Result(0, "Section does not exist.");
+    }
+
+    User editingUser = section.getOccupant();
+    if (editingUser != null) {
+      return new Result(0, "The section is being edited");
+    }
+
+    // set occupant to that section
+    CommitParams commitParams = new CommitParams(user, 2, null,
+            request.getDocName(), request.getSectionNum(), 2);
+    Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+
+    if (result.getStatus() == 0) {
+      return new Result(0, "Request aborted.");
+    }
+
+    try {
+      InputStream inputStream = new FileInputStream(section.getPath());
+      SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
+      return new Result(1, "Succeed", remoteInputStream);
+    } catch (IOException ioe) {
+      return new Result(0, "IO Exception while accessing the section");
+    }
+  }
+
+  @Override
+  public Result editEnd(User user, Request request) throws RemoteException {
+    return null;
+  }
 
   @Override
   public Result createDocument(User user, Request request) throws RemoteException {
@@ -246,9 +250,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Document does not exist.");
     }
 
-        if (!document.hasPermit(user)) {
-            return new Result(0, "You do not have access.");
-        }
+    if (!document.hasPermit(user)) {
+      return new Result(0, "You do not have access.");
+    }
 
     Section section = document.getSection(request.getSectionNum());
     if (section == null) {
@@ -256,12 +260,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     }
 
-        User editingUser = section.getOccupant();
-        if (editingUser == null) {
-            return new Result(1, "None");
-        }
-        return new Result(1, editingUser.getUsername());
+    User editingUser = section.getOccupant();
+    if (editingUser == null) {
+      return new Result(1, "None");
     }
+    return new Result(1, editingUser.getUsername());
+  }
 
   @Override
   public Result showDocumentContent(User user, Request request) throws RemoteException {
@@ -304,15 +308,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Document does not exist.");
     }
 
-    if (!document.getCreator().equal(user)) {
-        return new Result(0, "You do not have access.");
+    if (!document.getCreator().equals(user)) {
+      return new Result(0, "You do not have access.");
     }
 
     // TODO: ADD 2PC
     document.addAuthor(request.getTargetUser());
     // TODO: 4/17/20 assign to other servers, shutdown hook
     return new Result(1, "Succeed");
-    }
+  }
 
   @Override
   public void kill() throws RemoteException {

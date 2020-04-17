@@ -45,6 +45,10 @@ public class AliveUserDatabase {
     return null;
   }
 
+  String getTokenByUser(String username) {
+    return onlineUsers.get(username).getToken();
+  }
+
   public boolean isLoggedIn(String username) {
     return onlineUsers.containsKey(username);
   }
