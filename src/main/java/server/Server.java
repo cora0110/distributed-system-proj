@@ -11,6 +11,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import chat.ChatManager;
 import model.AcceptAck;
 import model.CommitParams;
 import model.Document;
@@ -29,6 +30,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
   private ReentrantReadWriteLock readWriteLock;
+
+  private ChatManager chatManager;
 
   private NotiServerRunnable notificationThread;
 
@@ -127,7 +130,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
           return new Result(0, "Token generation failure while logging in.");
         }
       } else {
-        return new Result((0, "Username and password do not match."));
+        return new Result(0, "Username and password do not match.");
       }
     }
   }
@@ -152,6 +155,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result edit(User user, Request request) throws RemoteException {
+    // TODO: 4/17/20 assign to other servers
+//    chatManager.getChatAddress()
+    return null;
+  }
+
+  @Override
+  public Result editEnd(User user, Request request) throws RemoteException {
     return null;
   }
 
