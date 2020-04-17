@@ -44,4 +44,8 @@ public class Section implements Serializable {
   public String getPath() {
     return path;
   }
+
+  public void setOccupant(User occupant) {
+    this.occupant = occupant;
+  }
 }
