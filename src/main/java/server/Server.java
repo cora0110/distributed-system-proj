@@ -9,8 +9,8 @@ import java.rmi.RemoteException;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class ServerImpl implements ServerInterface {
-    public int serverNum;
+public class Server implements ServerInterface {
+    public int port;
     private DocumentDatabase documentDatabase;
     private AliveUserDatabase aliveUserDatabase;
     private UserDatabase userDatabase;
@@ -18,10 +18,10 @@ public class ServerImpl implements ServerInterface {
 
     private NotificationServerThread notificationThread;
 
-    private final String DATA_DIR = "./server_data/" + serverNum;
+    private final String DATA_DIR = "./server_data" + port + "/";
 
-    public ServerImpl(int serverNum) {
-        this.serverNum = serverNum;
+    public Server(int port) {
+        this.port = port;
         userDatabase = initUserDB();
         documentDatabase = initDocumentDB();
         aliveUserDatabase = new AliveUserDatabase();
@@ -69,7 +69,7 @@ public class ServerImpl implements ServerInterface {
             CommitParams commitParams =
                     new CommitParams(user, 1, null, null, -1, 0);
             Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-            if (result.status == 1) return new Result(1, "Create user succeed");
+            if (result.getStatus() == 1) return new Result(1, "Create user succeed");
             else return new Result(0, "Unknown failure");
         } else {
             return new Result(0, "Username already exists");
@@ -111,7 +111,7 @@ public class ServerImpl implements ServerInterface {
                 new CommitParams(user, 0, null, null, -1, 1);
         Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
-        if (result.status == 1) {
+        if (result.getStatus() == 1) {
             System.out.println("User logged out: " + user.getUsername());
             return new Result(1, "succeed");
         } else {
@@ -131,8 +131,22 @@ public class ServerImpl implements ServerInterface {
     }
 
     @Override
-    public Result createSection(User user, Request request) throws RemoteException {
-        return null;
+    public Result createDocument(User user, Request request) throws RemoteException {
+        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+            return new Result(0, "Not logged in.");
+        }
+
+        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+            return new Result(0, "User does not match token.");
+        }
+
+        Document document = documentDatabase.getDocumentByName(request.getDocName());
+        if (document != null) {
+            return new Result(0, "Document already exists.");
+        }
+
+        documentDatabase.createNewDocument(DATA_DIR, request.getSectionNum(), request.getDocName(), user);
+        return new Result(1, "Succeed");
     }
 
     @Override
@@ -141,11 +155,11 @@ public class ServerImpl implements ServerInterface {
             return new Result(0, "Not logged in.");
         }
 
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.token))) {
+        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
             return new Result(0, "User does not match token.");
         }
 
-        Document document = documentDatabase.getDocumentByName(request.docName);
+        Document document = documentDatabase.getDocumentByName(request.getDocName());
         if (document == null) {
             return new Result(0, "Document does not exist.");
         }
@@ -154,7 +168,7 @@ public class ServerImpl implements ServerInterface {
             return new Result(0, "You do not have access.");
         }
 
-        Section section = document.getSection(request.sectionNum);
+        Section section = document.getSection(request.getSectionNum());
         if (section == null) {
             return new Result(0, "Section does not exist.");
 
@@ -173,12 +187,12 @@ public class ServerImpl implements ServerInterface {
     }
 
     @Override
-    public Result listOwnedDocs(User user) throws RemoteException {
+    public Result listOwnedDocs(User user, Request request) throws RemoteException {
         if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
             return new Result(0, "Not logged in.");
         }
 
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.token))) {
+        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
             return new Result(0, "User does not match token.");
         }
 
@@ -194,7 +208,25 @@ public class ServerImpl implements ServerInterface {
 
     @Override
     public Result shareDoc(User user, Request request) throws RemoteException {
-        return null;
+        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+            return new Result(0, "Not logged in.");
+        }
+
+        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+            return new Result(0, "User does not match token.");
+        }
+
+        Document document = documentDatabase.getDocumentByName(request.getDocName());
+        if (document == null) {
+            return new Result(0, "Document does not exist.");
+        }
+
+        if (!document.isCreator(user)) {
+            return new Result(0, "You do not have access.");
+        }
+
+        document.addModifier(request.getTargetUser());
+        return new Result(1, "Succeed");
     }
 
     private UserDatabase initUserDB() {

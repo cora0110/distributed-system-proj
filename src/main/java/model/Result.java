@@ -6,13 +6,29 @@ import java.io.Serializable;
 
 //TODO
 public class Result implements Serializable {
-    public int status;
-    public String message;
-    public FileInputStream fileInputStream;
-    public FileOutputStream fileOutputStream;
+    private int status;
+    private String message;
+    private FileInputStream fileInputStream;
+    private FileOutputStream fileOutputStream;
 
     public Result(int status, String message) {
         this.status = status;
         this.message = message;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public FileInputStream getFileInputStream() {
+        return fileInputStream;
+    }
+
+    public FileOutputStream getFileOutputStream() {
+        return fileOutputStream;
     }
 }

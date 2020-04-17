@@ -37,7 +37,7 @@ public interface ServerInterface extends Remote {
     Result edit(User user, Request request) throws RemoteException;
     Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException;
 
-    Result createSection(User user, Request request) throws RemoteException;
+    Result createDocument(User user, Request request) throws RemoteException;
 
     Result showSection(User user, Request request) throws RemoteException;
     Result showDocumentContent(User user, Request request) throws RemoteException;
