@@ -16,14 +16,17 @@ import lombok.Setter;
 public class Result implements Serializable {
   private int status;
   private String message;
-  private FileInputStream fileInputStream;
-  private FileOutputStream fileOutputStream;
-  RemoteInputStream remoteInputStream;
-  RemoteOutputStream remoteOutputStream;
+  private RemoteInputStream remoteInputStream;
+  private RemoteOutputStream remoteOutputStream;
 
   public Result(int status, String message) {
     this.status = status;
     this.message = message;
   }
 
+  public Result(int status, String message, RemoteInputStream remoteInputStream) {
+    this.status = status;
+    this.message = message;
+    this.remoteInputStream = remoteInputStream;
+  }
 }

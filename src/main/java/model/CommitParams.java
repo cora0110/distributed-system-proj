@@ -5,7 +5,7 @@ import java.io.Serializable;
 
 public class CommitParams implements Serializable {
     private User user;
-    // 1 stands for put, 0 stands for delete
+    // 1 stands for put, 0 stands for delete, 2 stands for update
     int type;
     private FileInputStream fileInputStream;
 
