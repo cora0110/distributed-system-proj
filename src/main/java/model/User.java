@@ -38,6 +38,13 @@ public class User implements Serializable {
     return getEncrypted(tokenString);
   }
 
+
+  public String generateToken(long timestamp) throws Exception {
+    String tokenString = password + timestamp;
+    return getEncrypted(tokenString);
+  }
+
+
   /**
    * Get MD5 encrypted result.
    */
