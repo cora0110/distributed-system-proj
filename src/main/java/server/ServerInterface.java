@@ -42,7 +42,7 @@ public interface ServerInterface extends Remote {
     Result showSection(User user, Request request) throws RemoteException;
     Result showDocumentContent(User user, Request request) throws RemoteException;
 
-    Result listOwnedDocs(User user) throws RemoteException;
+    Result listOwnedDocs(User user, Request request) throws RemoteException;
 
     // TODO: Since we are unfamiliar with the notification mechanism, please feel free to change/add the signatures
     Result shareDoc(User user, Request request) throws RemoteException;

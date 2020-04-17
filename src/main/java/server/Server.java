@@ -120,9 +120,40 @@ public class Server implements ServerInterface {
 
     }
 
+    //TODO: CDA manager not added here
     @Override
     public Result edit(User user, Request request) throws RemoteException {
-        return null;
+        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+            return new Result(0, "Not logged in.");
+        }
+
+        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+            return new Result(0, "User does not match token.");
+        }
+
+        Document document = documentDatabase.getDocumentByName(request.getDocName());
+        if (document == null) {
+            return new Result(0, "Document does not exist.");
+        }
+
+        if (!document.hasPermit(user)) {
+            return new Result(0, "You do not have access.");
+        }
+
+        Section section = document.getSection(request.getSectionNum());
+        if (section == null) {
+            return new Result(0, "Section does not exist.");
+        }
+
+        User editingUser = section.getOccupant();
+        if (editingUser != null) {
+            return new Result(0, "The section is being edited");
+        }
+
+        section.setOccupant(user);
+
+
+
     }
 
     @Override
@@ -164,7 +195,7 @@ public class Server implements ServerInterface {
             return new Result(0, "Document does not exist.");
         }
 
-        if (!document.canAccess(user)) {
+        if (!document.hasPermit(user)) {
             return new Result(0, "You do not have access.");
         }
 
@@ -174,7 +205,7 @@ public class Server implements ServerInterface {
 
         }
 
-        User editingUser = section.getUserOnEditing();
+        User editingUser = section.getOccupant();
         if (editingUser == null) {
             return new Result(1, "None");
         }
@@ -221,11 +252,11 @@ public class Server implements ServerInterface {
             return new Result(0, "Document does not exist.");
         }
 
-        if (!document.isCreator(user)) {
+        if (!document.getCreator().equal(user)) {
             return new Result(0, "You do not have access.");
         }
 
-        document.addModifier(request.getTargetUser());
+        document.addAuthor(request.getTargetUser());
         return new Result(1, "Succeed");
     }
 

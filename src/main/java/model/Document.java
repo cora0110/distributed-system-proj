@@ -5,7 +5,11 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class Document implements Serializable {
   private static final long serialVersionUID = -5250135537941945156L;
 
