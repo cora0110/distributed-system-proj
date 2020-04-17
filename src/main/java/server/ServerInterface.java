@@ -46,4 +46,13 @@ public interface ServerInterface extends Remote {
 
     // TODO: Since we are unfamiliar with the notification mechanism, please feel free to change/add the signatures
     Result shareDoc(User user, Request request) throws RemoteException;
+
+    void kill() throws RemoteException;
+
+    boolean restart( DocumentDatabase documentDatabase,
+                         AliveUserDatabase aliveUserDatabase,
+                         UserDatabase userDatabase) throws  RemoteException;
+
+    boolean helpRestartServer(int deadServerPort) throws  RemoteException;
+
 }
