@@ -1,7 +1,5 @@
 package server;
 
-import model.*;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,317 +11,318 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import model.AcceptAck;
+import model.CommitParams;
+import model.Document;
+import model.PrepareAck;
+import model.Request;
+import model.Result;
+import model.Section;
+import model.User;
+import notification.NotiServerRunnable;
+
 public class Server extends UnicastRemoteObject implements ServerInterface {
-    public int port;
-    public String serverName;
-    private ServerLog serverLog;
-    private DocumentDatabase documentDatabase;
-    private AliveUserDatabase aliveUserDatabase;
-    private UserDatabase userDatabase;
-    private ReentrantReadWriteLock readWriteLock;
+  public int port;
+  public String serverName;
+  private ServerLog serverLog;
+  private DocumentDatabase documentDatabase;
+  private AliveUserDatabase aliveUserDatabase;
+  private UserDatabase userDatabase;
+  private ReentrantReadWriteLock readWriteLock;
 
-    private NotificationServerThread notificationThread;
+  private NotiServerRunnable notificationThread;
 
-    private final String DATA_DIR = "./server_data" + port + "/";
+  private final String DATA_DIR = "./server_data" + port + "/";
 
-    public Server(int port) throws RemoteException {
-        this.port = port;
-        this.serverName = "Server" + port;
-        serverLog = new ServerLog();
-        userDatabase = initUserDB();
-        documentDatabase = initDocumentDB();
-        aliveUserDatabase = new AliveUserDatabase();
-        bindRMI();
+  public Server(int port) throws RemoteException {
+    this.port = port;
+    this.serverName = "Server" + port;
+    serverLog = new ServerLog();
+    userDatabase = initUserDB();
+    documentDatabase = initDocumentDB();
+    aliveUserDatabase = new AliveUserDatabase();
+    bindRMI();
+  }
+
+  /**
+   * Binds RMI
+   */
+  public void bindRMI() {
+    try {
+      Registry registry = LocateRegistry.createRegistry(port);
+      registry.rebind(serverName, this);
+      serverLog.log(serverName + " is running...");
+    } catch (Exception e) {
+      serverLog.log(e.getMessage());
     }
+  }
 
-    /**
-     * Binds RMI
-     */
-    public void bindRMI() {
-        try {
-            Registry registry = LocateRegistry.createRegistry(port);
-            registry.rebind(serverName, this);
-            serverLog.log(serverName+ " is running...");
-        } catch (Exception e) {
-            serverLog.log(e.getMessage());
-        }
+  @Override
+  public Result prepare(UUID transactionID) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public PrepareAck participantsPrepare(UUID transactionID) {
+    return null;
+  }
+
+  @Override
+  public Result accept(UUID transactionID) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public AcceptAck participantsAccept(UUID transactionID, CommitParams commitParams) {
+    return null;
+  }
+
+  @Override
+  public Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public Result initDocument(String docName, User user) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public Result initSection(int sectionNum, User user) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public Result createUser(User user) throws RemoteException {
+    String username = user.getUsername();
+    if (userDatabase.isUsernameAvailable(username)) {
+      CommitParams commitParams =
+              new CommitParams(user, 1, null, null, -1, 0);
+      Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+      if (result.getStatus() == 1) return new Result(1, "Create user succeed");
+      else return new Result(0, "Unknown failure");
+    } else {
+      return new Result(0, "Username already exists");
     }
+  }
 
-    @Override
-    public Result prepare(UUID transactionID) throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public PrepareAck participantsPrepare(UUID transactionID) {
-        return null;
-    }
-
-    @Override
-    public Result accept(UUID transactionID) throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public AcceptAck participantsAccept(UUID transactionID, CommitParams commitParams) {
-        return null;
-    }
-
-    @Override
-    public Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public Result initDocument(String docName, User user) throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public Result initSection(int sectionNum, User user) throws RemoteException {
-        return null;
-    }
-
-    @Override
-    public Result createUser(User user) throws RemoteException {
-        String username = user.getUsername();
-        if (userDatabase.isUsernameAvailable(username)) {
-            CommitParams commitParams =
-                    new CommitParams(user, 1, null, null, -1, 0);
-            Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-            if (result.getStatus() == 1) return new Result(1, "Create user succeed");
-            else return new Result(0, "Unknown failure");
-        } else {
-            return new Result(0, "Username already exists");
-        }
-    }
-
-    @Override
-    public Result login(User user) throws RemoteException {
-        if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
-            return new Result(0, "Already logged in.");
-        } else {
-            User loggedInUser = userDatabase.doLogin(user.getUsername(), user.getPassword());
-            if (loggedInUser != null) {
-                CommitParams commitParams =
-                        new CommitParams(user, 1, null, null, -1, 1);
-                Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-                String token = result.message;
-                if (token != null) {
-                    // TODO
-                    notificationThread = new NotificationServerThread(user, socket.getInetAddress().getHostName(), (Integer) args[2]);
-                    notificationThread.start();
-                    System.out.println("New user logged in: " + user.getUsername());
-                    return new Result(1, "succeed");
-                } else {
-                    return new Result(0, "Token generation failure while logging in.");
-                }
-            } else {
-                return new Result((0, "Username and password do not match."));
-            }
-        }
-    }
-
-    @Override
-    public Result logout(User user) throws RemoteException {
-        // TODO
-        notificationThread.close();
-
+  @Override
+  public Result login(User user) throws RemoteException {
+    if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Already logged in.");
+    } else {
+      User loggedInUser = userDatabase.doLogin(user.getUsername(), user.getPassword());
+      if (loggedInUser != null) {
         CommitParams commitParams =
-                new CommitParams(user, 0, null, null, -1, 1);
+                new CommitParams(user, 1, null, null, -1, 1);
         Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-
-        if (result.getStatus() == 1) {
-            System.out.println("User logged out: " + user.getUsername());
-            return new Result(1, "succeed");
+        String token = result.getMessage();
+        if (token != null) {
+          // TODO
+//          notificationThread = new NotiServerRunnable(user, socket.getInetAddress().getHostName(), (Integer) args[2]);
+//          notificationThread.run();
+          System.out.println("New user logged in: " + user.getUsername());
+          return new Result(1, "succeed");
         } else {
-            return new Result(0, "Failure while removing from alive user DB.");
+          return new Result(0, "Token generation failure while logging in.");
         }
+      } else {
+        return new Result((0, "Username and password do not match."));
+      }
+    }
+  }
+
+  @Override
+  public Result logout(User user) throws RemoteException {
+    // TODO
+    notificationThread.stop();
+
+    CommitParams commitParams =
+            new CommitParams(user, 0, null, null, -1, 1);
+    Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+
+    if (result.getStatus() == 1) {
+      System.out.println("User logged out: " + user.getUsername());
+      return new Result(1, "succeed");
+    } else {
+      return new Result(0, "Failure while removing from alive user DB.");
+    }
+
+  }
+
+  @Override
+  public Result edit(User user, Request request) throws RemoteException {
+    return null;
+  }
+
+  @Override
+  public Result createDocument(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
+    }
+
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
+    }
+
+    Document document = documentDatabase.getDocumentByName(request.getDocName());
+    if (document != null) {
+      return new Result(0, "Document already exists.");
+    }
+
+    documentDatabase.createNewDocument(DATA_DIR, request.getSectionNum(), request.getDocName(), user);
+    return new Result(1, "Succeed");
+  }
+
+  @Override
+  public Result showSection(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
+    }
+
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
+    }
+
+    Document document = documentDatabase.getDocumentByName(request.getDocName());
+    if (document == null) {
+      return new Result(0, "Document does not exist.");
+    }
+
+    if (!document.hasPermit(user)) {
+      return new Result(0, "You do not have access.");
+    }
+
+    Section section = document.getSection(request.getSectionNum());
+    if (section == null) {
+      return new Result(0, "Section does not exist.");
 
     }
 
-    @Override
-    public Result edit(User user, Request request) throws RemoteException {
-        return null;
+    User editingUser = section.getOccupant();
+    if (editingUser == null) {
+      return new Result(1, "None");
+    }
+    return new Result(1, editingUser.getUsername());
+  }
+
+  @Override
+  public Result showDocumentContent(User user, Request request) throws RemoteException {
+    return null;
+  }
+
+
+  @Override
+  public Result listOwnedDocs(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
     }
 
-    @Override
-    public Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException {
-        return null;
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
     }
 
-    @Override
-    public Result createDocument(User user, Request request) throws RemoteException {
-        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-            return new Result(0, "Not logged in.");
-        }
+    String[] docs = documentDatabase.getAllDocumentsNames(user);
 
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-            return new Result(0, "User does not match token.");
-        }
-
-        Document document = documentDatabase.getDocumentByName(request.getDocName());
-        if (document != null) {
-            return new Result(0, "Document already exists.");
-        }
-
-        documentDatabase.createNewDocument(DATA_DIR, request.getSectionNum(), request.getDocName(), user);
-        return new Result(1, "Succeed");
+    if (docs.length == 0) {
+      return new Result(1, "None");
     }
 
-    @Override
-    public Result showSection(User user, Request request) throws RemoteException {
-        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-            return new Result(0, "Not logged in.");
-        }
+    String names = String.join(",", docs);
+    return new Result(1, names);
+  }
 
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-            return new Result(0, "User does not match token.");
-        }
-
-        Document document = documentDatabase.getDocumentByName(request.getDocName());
-        if (document == null) {
-            return new Result(0, "Document does not exist.");
-        }
-
-        if (!document.canAccess(user)) {
-            return new Result(0, "You do not have access.");
-        }
-
-        Section section = document.getSection(request.getSectionNum());
-        if (section == null) {
-            return new Result(0, "Section does not exist.");
-
-        }
-
-        User editingUser = section.getUserOnEditing();
-        if (editingUser == null) {
-            return new Result(1, "None");
-        }
-        return new Result(1, editingUser.getUsername());
+  @Override
+  public Result shareDoc(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
     }
 
-    @Override
-    public Result showDocumentContent(User user, Request request) throws RemoteException {
-        return null;
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
     }
 
-    @Override
-    public Result listOwnedDocs(User user) throws RemoteException {
-        return null;
+    Document document = documentDatabase.getDocumentByName(request.getDocName());
+    if (document == null) {
+      return new Result(0, "Document does not exist.");
     }
 
-    @Override
-    public Result listOwnedDocs(User user, Request request) throws RemoteException {
-        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-            return new Result(0, "Not logged in.");
-        }
-
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-            return new Result(0, "User does not match token.");
-        }
-
-        String[] docs = documentDatabase.getAllDocumentsNames(user);
-
-        if (docs.length == 0) {
-            return new Result(1, "None");
-        }
-
-        String names = String.join(",", docs);
-        return new Result(1, names);
+    if (!document.getCreator().equals(user)) {
+      return new Result(0, "You do not have access.");
     }
 
-    @Override
-    public Result shareDoc(User user, Request request) throws RemoteException {
-        if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-            return new Result(0, "Not logged in.");
-        }
+    document.addAuthor(request.getTargetUser());
+    return new Result(1, "Succeed");
+  }
 
-        if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-            return new Result(0, "User does not match token.");
-        }
-
-        Document document = documentDatabase.getDocumentByName(request.getDocName());
-        if (document == null) {
-            return new Result(0, "Document does not exist.");
-        }
-
-        if (!document.isCreator(user)) {
-            return new Result(0, "You do not have access.");
-        }
-
-        document.addModifier(request.getTargetUser());
-        return new Result(1, "Succeed");
+  @Override
+  public void kill() throws RemoteException {
+    Registry registry = LocateRegistry.getRegistry(this.port);
+    try {
+      registry.unbind(this.serverName);
+    } catch (NotBoundException e) {
+      e.printStackTrace();
     }
 
-    @Override
-    public void kill() throws RemoteException {
-        Registry registry = LocateRegistry.getRegistry(this.port);
-        try {
-            registry.unbind(this.serverName);
-        } catch (NotBoundException e) {
-            e.printStackTrace();
-        }
+  }
 
-    }
-
-    @Override
-    public boolean restart( DocumentDatabase documentDatabase,
+  @Override
+  public boolean restart(DocumentDatabase documentDatabase,
                          AliveUserDatabase aliveUserDatabase,
                          UserDatabase userDatabase) {
-        this.documentDatabase = documentDatabase;
-        this.aliveUserDatabase = aliveUserDatabase;
-        this.userDatabase = userDatabase;
-        return true;
-    }
+    this.documentDatabase = documentDatabase;
+    this.aliveUserDatabase = aliveUserDatabase;
+    this.userDatabase = userDatabase;
+    return true;
+  }
 
-    @Override
-    public boolean helpRestartServer(int deadServerPort)  {
-        try {
-            Registry registry = LocateRegistry.getRegistry(deadServerPort);
-            ServerInterface stub = (ServerInterface) registry.lookup("Server" + deadServerPort);
-            stub.restart(this.documentDatabase, this.aliveUserDatabase, this.userDatabase);
-            return true;
-        } catch(Exception e) {
-            serverLog.log("Failed Restart Server! Exception: " + e.getMessage());
-        }
-        return false;
+  @Override
+  public boolean helpRestartServer(int deadServerPort) {
+    try {
+      Registry registry = LocateRegistry.getRegistry(deadServerPort);
+      ServerInterface stub = (ServerInterface) registry.lookup("Server" + deadServerPort);
+      stub.restart(this.documentDatabase, this.aliveUserDatabase, this.userDatabase);
+      return true;
+    } catch (Exception e) {
+      serverLog.log("Failed Restart Server! Exception: " + e.getMessage());
     }
+    return false;
+  }
 
-    private UserDatabase initUserDB() {
-        UserDatabase loadedUsersDB = loadUserDB();
-        return loadedUsersDB == null ? new UserDatabase() : loadedUsersDB;
+  private UserDatabase initUserDB() {
+    UserDatabase loadedUsersDB = loadUserDB();
+    return loadedUsersDB == null ? new UserDatabase() : loadedUsersDB;
+  }
+
+  private UserDatabase loadUserDB() {
+    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "UserDB.dat"))) {
+      return (UserDatabase) input.readObject();
+    } catch (IOException | ClassNotFoundException e) {
+      return null;
     }
+  }
 
-    private UserDatabase loadUserDB() {
-        try(ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "UserDB.dat"))) {
-            return (UserDatabase) input.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            return  null;
-        }
+  private DocumentDatabase initDocumentDB() {
+    DocumentDatabase loadedDocumentsDB = loadDocumentDB();
+    return loadedDocumentsDB == null ? new DocumentDatabase() : loadedDocumentsDB;
+  }
+
+
+  private DocumentDatabase loadDocumentDB() {
+    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "DocDB.dat"))) {
+      return (DocumentDatabase) input.readObject();
+    } catch (IOException | ClassNotFoundException e) {
+      return null;
     }
+  }
 
-    private DocumentDatabase initDocumentDB() {
-        DocumentDatabase loadedDocumentsDB = loadDocumentDB();
-        return loadedDocumentsDB == null ? new DocumentDatabase() : loadedDocumentsDB;
+  private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
+    PrepareAck prepareAck = participantsPrepare(transactionID);
+    if (prepareAck.numOfAcks < 5) {
+      return new Result(0, "Request aborted.");
+    } else {
+      participantsAccept(transactionID, commitParams);
+      return new Result(1, "Succeed");
     }
-
-
-    private DocumentDatabase loadDocumentDB() {
-        try(ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "DocDB.dat"))) {
-            return (DocumentDatabase) input.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            return null;
-        }
-    }
-
-    private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
-        PrepareAck prepareAck = participantsPrepare(transactionID);
-        if (prepareAck.numOfAcks < 5) {
-            return new Result(0, "Request aborted.");
-        } else {
-            participantsAccept(transactionID, commitParams);
-            return new Result(1, "Succeed");
-        }
-    }
+  }
 }
