@@ -1,21 +1,19 @@
 package server;
 
+import com.healthmarketscience.rmiio.RemoteInputStream;
+import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
+
 import java.io.*;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.healthmarketscience.rmiio.RemoteInputStream;
-import com.healthmarketscience.rmiio.RemoteInputStreamWrapper;
-import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
-
+import chat.ChatManager;
 import model.AcceptAck;
 import model.CommitParams;
 import model.Document;
@@ -34,6 +32,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
   private ReentrantReadWriteLock readWriteLock;
+
+  private ChatManager chatManager;
 
   private NotiServerRunnable notificationThread;
 
@@ -119,7 +119,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       // check username and password
       User loggedInUser = userDatabase.doLogin(user.getUsername(), user.getPassword());
       if (loggedInUser != null) {
-
         CommitParams commitParams =
                 new CommitParams(user, 1, null, null, -1, 1);
 
@@ -131,7 +130,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         String token = aliveUserDatabase.getTokenbyUser(user);
 
         if (token != null) {
-          // TODO: NITIFICATION THREAD
+          // TODO: NOTIFICATION THREAD
 //          notificationThread = new NotiServerRunnable(user, socket.getInetAddress().getHostName(), (Integer) args[2]);
 //          notificationThread.run();
           System.out.println("New user logged in: " + user.getUsername());
@@ -150,6 +149,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     // TODO: NOTIFICATION THREAD
     notificationThread.stop();
 
+    // TODO: ANY NEED TO DO 2PC?
     CommitParams commitParams =
             new CommitParams(user, 0, null, null, -1, 1);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
@@ -183,7 +183,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "You do not have access.");
     }
 
-    Section section = document.getSection(request.getSectionNum());
+    Section section = document.getSectionByIndex(request.getSectionNum());
     if (section == null) {
       return new Result(0, "Section does not exist.");
     }
@@ -194,7 +194,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     // set occupant to that section
-    CommitParams commitParams = new CommitParams(user, 2.1, null,
+    CommitParams commitParams = new CommitParams(user, 3, null,
             request.getDocName(), request.getSectionNum(), 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
@@ -212,8 +212,44 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   @Override
-  public Result editEnd(User user, FileInputStream fileInputStream) throws RemoteException {
-      return null;
+  public Result editEnd(User user, Request request) throws RemoteException {
+    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+      return new Result(0, "Not logged in.");
+    }
+
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+      return new Result(0, "User does not match token.");
+    }
+
+    Document document = documentDatabase.getDocumentByName(request.getDocName());
+    if (document == null) {
+      return new Result(0, "Document does not exists.");
+    }
+
+    if (!document.hasPermit(user)) {
+      return new Result(0, "You do not have access.");
+    }
+
+    Section section = document.getSectionByIndex(request.getSectionNum());
+    if (section == null) {
+      return new Result(0, "Section does not exist.");
+    }
+
+    User editingUser = section.getOccupant();
+    if (!editingUser.equals(user)) {
+      return new Result(0, "The section is being edited by other");
+    }
+
+    CommitParams commitParams = new CommitParams(user, 5,
+            request.getRemoteInputStream(), request.getDocName(), request.getSectionNum(), 2);
+
+    Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+
+    if (result.getStatus() == 0) {
+      return new Result(0, "Request aborted");
+    } else {
+      return new Result(1, "Succeed");
+    }
   }
 
   @Override
@@ -256,22 +292,22 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Document does not exist.");
     }
 
-        if (!document.hasPermit(user)) {
-            return new Result(0, "You do not have access.");
-        }
+    if (!document.hasPermit(user)) {
+      return new Result(0, "You do not have access.");
+    }
 
-    Section section = document.getSection(request.getSectionNum());
+    Section section = document.getSectionByIndex(request.getSectionNum());
     if (section == null) {
       return new Result(0, "Section does not exist.");
 
     }
 
-        User editingUser = section.getOccupant();
-        if (editingUser == null) {
-            return new Result(1, "None");
-        }
-        return new Result(1, editingUser.getUsername());
+    User editingUser = section.getOccupant();
+    if (editingUser == null) {
+      return new Result(1, "None");
     }
+    return new Result(1, editingUser.getUsername());
+  }
 
   @Override
   public Result showDocumentContent(User user, Request request) throws RemoteException {
@@ -291,7 +327,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     Vector<InputStream> streamVector = new Vector<>();
 
     try {
-      for (Section s : document.getSection()) {
+      for (Section s : document.getSections()) {
         streamVector.add(new FileInputStream(s.getPath()));
       }
       SequenceInputStream sequenceInputStream = new SequenceInputStream(streamVector.elements());
@@ -338,11 +374,11 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Document does not exist.");
     }
 
-    if (!document.getCreator().equal(user)) {
-        return new Result(0, "You do not have access.");
+    if (!document.getCreator().equals(user)) {
+      return new Result(0, "You do not have access.");
     }
 
-    CommitParams commitParams = new CommitParams(request.getTargetUser(), 2.2,
+    CommitParams commitParams = new CommitParams(request.getTargetUser(), 4,
             null, request.getDocName(), -1, 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
@@ -364,7 +400,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   }
 
-  //TODO: ISSUES HERE
   @Override
   public boolean restart(DocumentDatabase documentDatabase,
                          AliveUserDatabase aliveUserDatabase,
