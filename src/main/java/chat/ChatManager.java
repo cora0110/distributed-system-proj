@@ -21,6 +21,24 @@ public class ChatManager {
   }
 
   /**
+   * Convert IP address to long.
+   */
+  public static long addressToLong(InetAddress address) {
+    int result = 0;
+    for (byte b : address.getAddress()) {
+      result = result << 8 | (b & 0xFF);
+    }
+    return result;
+  }
+
+  /**
+   * Converts a long value to its InetAddress representation.
+   */
+  public static InetAddress longToAddress(long address) throws UnknownHostException {
+    return InetAddress.getByName(String.valueOf(address));
+  }
+
+  /**
    * Get available multicast address.
    *
    * @param document document being edited
@@ -50,24 +68,6 @@ public class ChatManager {
         chatDatabase.remove(document);
       }
     }
-  }
-
-  /**
-   * Convert IP address to long.
-   */
-  public static long addressToLong(InetAddress address) {
-    int result = 0;
-    for (byte b : address.getAddress()) {
-      result = result << 8 | (b & 0xFF);
-    }
-    return result;
-  }
-
-  /**
-   * Converts a long value to its InetAddress representation.
-   */
-  public static InetAddress longToAddress(long address) throws UnknownHostException {
-    return InetAddress.getByName(String.valueOf(address));
   }
 
 }

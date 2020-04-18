@@ -34,16 +34,16 @@ import server.ServerInterface;
 
 public class Client {
 
+  public static int UDP_PORT = 1338;
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
   private static int CENTRAL_SERVER_RMI_PORT = 12354;
-
+  private static String DATA_DIR = "./client_data/";
   private ServerInterface serverInterface;
   private Sender messageSender;
   private Receiver messageReceiver;
   private NotiClientRunnable notiClientRunnable;
   private LocalSession session;
   private User user;
-
   public Client() {
     try {
       messageReceiver = new Receiver();
@@ -53,29 +53,12 @@ public class Client {
     notiClientRunnable = new NotiClientRunnable(serverInterface);
   }
 
-  public static int UDP_PORT = 1338;
-  private static String DATA_DIR = "./client_data/";
-
-
   /**
-   * Tries to connect to the {@code Server} running instance, create references to the streams for
-   * {@code Socket} I/O operations and starts the {@code NotificationClientThread}.
-   * <p>
-   * This method needs to be called after {@code setup} method execution.
-   *
-   * @throws IOException if I/O errors occur
-   * @see DataInputStream
-   * @see DataOutputStream
+   * Check if the data directory exists and is a valid directory, otherwise it creates it.
    */
-  private void connect() throws Exception {
-    Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-    CentralServerInterface centralServerInterface = (CentralServerInterface) centralRegistry.lookup(CentralServerInterface.class.getSimpleName());
-    int port = centralServerInterface.assignAliveServerToClient();
-    Registry registry = LocateRegistry.getRegistry(port);
-    serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
-    messageReceiver.run();
-    messageSender = new Sender();
-    if (messageSender == null) throw new IOException();
+  private static void checkDataDirectory() {
+    File dataDir = new File(DATA_DIR);
+    if (!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
   }
 
 
@@ -89,15 +72,6 @@ public class Client {
 //    File configFile = new File(filePath);
 //    return configFile.isFile() && configFile.exists();
 //  }
-
-  /**
-   * Check if the data directory exists and is a valid directory, otherwise it creates it.
-   */
-  private static void checkDataDirectory() {
-    File dataDir = new File(DATA_DIR);
-    if (!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
-  }
-
 
   /**
    * Program Entry Point.
@@ -121,6 +95,26 @@ public class Client {
     }
   }
 
+  /**
+   * Tries to connect to the {@code Server} running instance, create references to the streams for
+   * {@code Socket} I/O operations and starts the {@code NotificationClientThread}.
+   * <p>
+   * This method needs to be called after {@code setup} method execution.
+   *
+   * @throws IOException if I/O errors occur
+   * @see DataInputStream
+   * @see DataOutputStream
+   */
+  private void connect() throws Exception {
+    Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
+    CentralServerInterface centralServerInterface = (CentralServerInterface) centralRegistry.lookup(CentralServerInterface.class.getSimpleName());
+    int port = centralServerInterface.assignAliveServerToClient();
+    Registry registry = LocateRegistry.getRegistry(port);
+    serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
+    messageReceiver.run();
+    messageSender = new Sender();
+    if (messageSender == null) throw new IOException();
+  }
 
   /**
    * Prints out and help message that sums up the {@code Client} commands list.

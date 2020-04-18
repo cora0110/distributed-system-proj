@@ -41,11 +41,11 @@ public class Section implements Serializable {
     return ocp;
   }
 
-  public String getPath() {
-    return path;
-  }
-
   public void setOccupant(User occupant) {
     this.occupant = occupant;
+  }
+
+  public String getPath() {
+    return path;
   }
 }

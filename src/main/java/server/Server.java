@@ -29,14 +29,13 @@ import model.User;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int port;
+  private final String DATA_DIR = "./server_data" + port + "/";
   public String serverName;
   private ServerLog serverLog;
   private DocumentDatabase documentDatabase;
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
   private ChatManager chatManager;
-
-  private final String DATA_DIR = "./server_data" + port + "/";
 
   public Server(int port) throws RemoteException {
     this.port = port;

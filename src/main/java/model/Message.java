@@ -21,16 +21,16 @@ public class Message implements Serializable {
     this.timestamp = timestamp;
   }
 
-  public byte[] getBytes() {
-    String s = timestamp + ":" + sender + " " + content;
-    return s.getBytes();
-  }
-
   public Message(String string) {
     String[] timeHead = string.split("/", 2);
     this.timestamp = Long.parseLong(timeHead[0]);
     String[] senderHead = timeHead[1].split(" ", 2);
     this.sender = senderHead[0];
     this.content = senderHead[1];
+  }
+
+  public byte[] getBytes() {
+    String s = timestamp + ":" + sender + " " + content;
+    return s.getBytes();
   }
 }

@@ -3,8 +3,6 @@ package model;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.RemoteOutputStream;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
@@ -17,11 +15,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class Result implements Serializable {
+  List<String> unreadNotifications;
   private int status;
   private String message;
   private RemoteInputStream remoteInputStream;
   private RemoteOutputStream remoteOutputStream;
-  List<String> unreadNotifications;
 
   public Result(int status, String message) {
     this.status = status;
