@@ -19,6 +19,7 @@ import java.util.Vector;
 
 import chat.ChatManager;
 import model.AcceptAck;
+import model.CommitEnum;
 import model.CommitParams;
 import model.Document;
 import model.PrepareAck;
@@ -83,6 +84,36 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException {
+    switch (commitParams.getCommitEnum()) {
+      case PUT:
+        break;
+
+      case DELETE:
+        break;
+
+      case UPDATE_OCCUPANT:
+        break;
+
+      case UPDATE_AUTHOR:
+        break;
+
+      case UPDATE_SECTION:
+        break;
+
+      case SHARE:
+        // share doc, update local Document database
+        DocumentDatabase documentDatabase = commitParams.getDocumentDatabase();
+        this.documentDatabase = documentDatabase;
+        break;
+
+      case CHAT:
+        this.chatManager = commitParams.getChatManager();
+        break;
+
+      case LOGIN:
+        this.aliveUserDatabase = commitParams.getAliveUserDatabase();
+        break;
+    }
     return null;
   }
 
@@ -100,8 +131,16 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public Result createUser(User user) throws RemoteException {
     String username = user.getUsername();
     if (userDatabase.isUsernameAvailable(username)) {
-      CommitParams commitParams =
-              new CommitParams(user, 1, null, null, -1, 0);
+      // TODO: 4/17/20
+      CommitParams commitParams = new CommitParams();
+      commitParams.setUser(user);
+      commitParams.setCommitEnum(CommitEnum.CREATE_USER);
+      commitParams.setSectionNum(-1);
+      commitParams.setUserDatabase(userDatabase);
+
+//      CommitParams commitParams =
+//              new CommitParams(user, 1, null, null, -1, 0);
+
       Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
       if (result.getStatus() == 1) return new Result(1, "Create user succeed");
       else return new Result(0, "Request aborted.");
@@ -118,8 +157,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       // check username and password
       User loggedInUser = userDatabase.doLogin(user.getUsername(), user.getPassword());
       if (loggedInUser != null) {
-        CommitParams commitParams =
-                new CommitParams(user, 1, null, null, -1, 1);
+        // TODO: 4/17/20
+        CommitParams commitParams = new CommitParams();
+        commitParams.setUser(user);
+        commitParams.setCommitEnum(CommitEnum.LOGIN);
+        commitParams.setSectionNum(-1);
+        commitParams.setAliveUserDatabase(aliveUserDatabase);
+
+//        CommitParams commitParams =
+//                new CommitParams(user, 1, null, null, -1, 1);
 
         // TODO: 2PC AND RETURN TOKEN
         Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
@@ -129,9 +175,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         String token = aliveUserDatabase.getTokenByUser(user.getUsername());
 
         if (token != null) {
-//           TODO: NOTIFICATION THREAD? test
-//          notificationThread = new NotiServerRunnable(user, this);
-//          notificationThread.run();
           System.out.println("New user logged in: " + user.getUsername());
           return new Result(1, token);
         } else {
@@ -146,8 +189,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   @Override
   public Result logout(User user) throws RemoteException {
     // TODO: ANY NEED TO DO 2PC?
-    CommitParams commitParams =
-            new CommitParams(user, 0, null, null, -1, 1);
+    CommitParams commitParams = new CommitParams();
+    commitParams.setUser(user);
+    commitParams.setCommitEnum(CommitEnum.LOGOUT);
+    commitParams.setSectionNum(-1);
+    commitParams.setAliveUserDatabase(aliveUserDatabase);
+//    CommitParams commitParams =
+//            new CommitParams(user, 0, null, null, -1, 1);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 1) {
@@ -188,9 +236,16 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "The section is being edited");
     }
 
+    CommitParams commitParams = new CommitParams();
+    commitParams.setUser(user);
+    commitParams.setCommitEnum(CommitEnum.EDIT);
+    commitParams.setDocNanme(request.getDocName());
+    commitParams.setSectionNum(request.getSectionNum());
+    commitParams.setDocumentDatabase(documentDatabase);
+
     // set occupant to that section
-    CommitParams commitParams = new CommitParams(user, 3, null,
-            request.getDocName(), request.getSectionNum(), 2);
+//    CommitParams commitParams = new CommitParams(user, 3, null,
+//            request.getDocName(), request.getSectionNum(), 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 0) {
@@ -237,8 +292,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "The section is being edited by other");
     }
 
-    CommitParams commitParams = new CommitParams(user, 5,
-            request.getRemoteInputStream(), request.getDocName(), request.getSectionNum(), 2);
+    CommitParams commitParams = new CommitParams();
+    commitParams.setUser(user);
+    commitParams.setCommitEnum(CommitEnum.EDIT_END);
+    commitParams.setDocNanme(request.getDocName());
+    commitParams.setSectionNum(request.getSectionNum());
+    commitParams.setDocumentDatabase(documentDatabase);
+
+//    CommitParams commitParams = new CommitParams(user, 5,
+//            request.getRemoteInputStream(), request.getDocName(), request.getSectionNum(), 2);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
@@ -264,8 +326,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Document already exists.");
     }
 
-    CommitParams commitParams = new CommitParams(user, 1, null,
-            request.getDocName(), request.getSectionNum(), 2);
+    CommitParams commitParams = new CommitParams();
+    commitParams.setUser(user);
+    commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
+    commitParams.setDocNanme(request.getDocName());
+    commitParams.setSectionNum(request.getSectionNum());
+    commitParams.setDocumentDatabase(documentDatabase);
+
+//    CommitParams commitParams = new CommitParams(user, 1, null,
+//            request.getDocName(), request.getSectionNum(), 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
       return new Result(1, "Succeed");
@@ -376,14 +445,21 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     document.addAuthor(request.getTargetUser());
-    //TODO push notification
+    //TODO push notification test
     User sharedUser = userDatabase.getUserByUsername(request.getTargetUser().getUsername());
     sharedUser.getUnreadNotifications().add("User " +
             request.getTargetUser().getUsername() + " can now access the document " + document.getName());
 
-    // TODO: 4/17/20 assign share access to other servers, shutdown hook
-    CommitParams commitParams = new CommitParams(request.getTargetUser(), 4,
-            null, request.getDocName(), -1, 2);
+    // TODO: 4/17/20 assign share access to other servers
+    CommitParams commitParams = new CommitParams();
+    commitParams.setUser(user);
+    commitParams.setCommitEnum(CommitEnum.SHARE);
+    commitParams.setDocNanme(request.getDocName());
+    commitParams.setSectionNum(request.getSectionNum());
+    commitParams.setDocumentDatabase(documentDatabase);
+
+//    CommitParams commitParams = new CommitParams(request.getTargetUser(), 4,
+//            null, request.getDocName(), -1, 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
       return new Result(1, "Succeed");
@@ -405,11 +481,11 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public void kill() throws RemoteException {
     Registry registry = LocateRegistry.getRegistry(this.port);
     try {
+      // TODO: 4/17/20 add store database. shutdown hook
       registry.unbind(this.serverName);
     } catch (NotBoundException e) {
       e.printStackTrace();
     }
-
   }
 
   @Override

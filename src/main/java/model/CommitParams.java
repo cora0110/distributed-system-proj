@@ -4,27 +4,41 @@ import com.healthmarketscience.rmiio.RemoteInputStream;
 
 import java.io.Serializable;
 
+import chat.ChatManager;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import server.AliveUserDatabase;
+import server.DocumentDatabase;
+import server.UserDatabase;
+
+@Getter
+@Setter
+@NoArgsConstructor
 public class CommitParams implements Serializable {
   private User user;
-  // 1 stands for put, 0 stands for delete,
-  // 3 stands for update occupant, 4 stands for update author
-  // 5 stands for update section
-  private int type;
+  private CommitEnum commitEnum;
   private RemoteInputStream inputStream;
 
   private String docNanme;
-
   private int sectionNum;
 
   // 0: userDB, 1:aliveUserDB, 2:docDB
-  private int DBCode;
+//  private int DBCode;
 
-  public CommitParams(User user, int type, RemoteInputStream inputStream, String docNanme, int sectionNum, int DBCode) {
-    this.user = user;
-    this.type = type;
-    this.inputStream = inputStream;
-    this.docNanme = docNanme;
-    this.sectionNum = sectionNum;
-    this.DBCode = DBCode;
-  }
+  // in memory database
+  private DocumentDatabase documentDatabase;
+  private AliveUserDatabase aliveUserDatabase;
+  private ChatManager chatManager;
+  private UserDatabase userDatabase;
+
+//  public CommitParams(User user, int type, RemoteInputStream inputStream, String docNanme, int sectionNum, int DBCode) {
+//    this.user = user;
+//    this.type = type;
+//    this.inputStream = inputStream;
+//    this.docNanme = docNanme;
+//    this.sectionNum = sectionNum;
+//    this.DBCode = DBCode;
+//  }
+
 }

@@ -36,7 +36,7 @@ public class Client {
 
   public static int UDP_PORT = 1338;
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
-  private static int CENTRAL_SERVER_RMI_PORT = 12354;
+  private static int CENTRAL_SERVER_RMI_PORT = 12345;
   private static String DATA_DIR = "./client_data/";
   private ServerInterface serverInterface;
   private Sender messageSender;
@@ -44,6 +44,7 @@ public class Client {
   private NotiClientRunnable notiClientRunnable;
   private LocalSession session;
   private User user;
+
   public Client() {
     try {
       messageReceiver = new Receiver();
@@ -107,12 +108,13 @@ public class Client {
    */
   private void connect() throws Exception {
     Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-    CentralServerInterface centralServerInterface = (CentralServerInterface) centralRegistry.lookup(CentralServerInterface.class.getSimpleName());
-    int port = centralServerInterface.assignAliveServerToClient();
+    CentralServerInterface centralServer = (CentralServerInterface) centralRegistry.lookup("CentralServer" + CENTRAL_SERVER_RMI_PORT);
+    int port = centralServer.assignAliveServerToClient();
     Registry registry = LocateRegistry.getRegistry(port);
-    serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
-    messageReceiver.run();
+    serverInterface = (ServerInterface) registry.lookup("Server" + port);
     messageSender = new Sender();
+    Thread thread = new Thread(messageReceiver);
+    thread.start();
     if (messageSender == null) throw new IOException();
   }
 
@@ -319,7 +321,7 @@ public class Client {
       String token = result.getMessage();
       user = new User(username);
       notiClientRunnable.setUser(user);
-      notiClientRunnable.run();
+      new Thread(notiClientRunnable).start();
       session = new LocalSession(token, username);
       System.out.println("Logged in successfully as " + username);
     } else {
