@@ -15,3 +15,5 @@ TO Feng Yu:
 I'm not sure if you still need/how you use the notification thread, 
 please feel free to delete/modify.
     ServerImpl.login(), logout()
+
+Yuting 4/18 1:42, added mutex and logout() in `server.ActiveUserDatabase`.
