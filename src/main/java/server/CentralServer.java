@@ -13,7 +13,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private int centralPort;
   private String centralName;
   private int[] serverPorts;
-  private ServerLog serverLog;
+  private ServerLogger serverLogger;
   private Map<Integer, Boolean> serverStatus; // port -> status
 
   public CentralServer(String host, int currPort, int[] serverPorts) throws RemoteException {
@@ -26,7 +26,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       new Server(port);
       this.serverStatus.put(port, true);
     }
-    serverLog = new ServerLog();
+    serverLogger = new ServerLogger();
     bindRMI();
   }
 
@@ -61,9 +61,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     try {
       Registry registry = LocateRegistry.createRegistry(centralPort);
       registry.rebind(centralName, this);
-      serverLog.log(centralName + " is running...");
+      serverLogger.log(centralName + " is running...");
     } catch (Exception e) {
-      serverLog.log(e.getMessage());
+      serverLogger.log(e.getMessage());
     }
   }
 
@@ -84,7 +84,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       stub.kill();
       serverStatus.put(slaveServerPort, false);
     } catch (Exception e) {
-      serverLog.log("Failed Restart Slave Server! Exception: " + e.getMessage());
+      serverLogger.log("Failed Restart Slave Server! Exception: " + e.getMessage());
     }
   }
 
@@ -101,10 +101,10 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
         serverStatus.put(slaveServerPort, true);
         break;
       } catch (Exception e) {
-        serverLog.log("Failed Restart Slave Server! Exception: " + e.getMessage());
+        serverLogger.log("Failed Restart Slave Server! Exception: " + e.getMessage());
       }
     }
-    serverLog.log("No alive slave server found!");
+    serverLogger.log("No alive slave server found!");
   }
 
   /**

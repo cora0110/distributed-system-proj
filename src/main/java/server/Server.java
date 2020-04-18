@@ -32,7 +32,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public int port;
   private final String DATA_DIR = "./server_data" + port + "/";
   public String serverName;
-  private ServerLog serverLog;
+  private ServerLogger serverLogger;
   private DocumentDatabase documentDatabase;
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
@@ -41,7 +41,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public Server(int port) throws RemoteException {
     this.port = port;
     this.serverName = "Server" + port;
-    serverLog = new ServerLog();
+    serverLogger = new ServerLogger();
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
     aliveUserDatabase = new AliveUserDatabase();
@@ -56,9 +56,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     try {
       Registry registry = LocateRegistry.createRegistry(port);
       registry.rebind(serverName, this);
-      serverLog.log(serverName + " is running...");
+      serverLogger.log(serverName + " is running...");
     } catch (Exception e) {
-      serverLog.log(e.getMessage());
+      serverLogger.log(e.getMessage());
     }
   }
 
@@ -506,7 +506,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       stub.restart(this.documentDatabase, this.aliveUserDatabase, this.userDatabase);
       return true;
     } catch (Exception e) {
-      serverLog.log("Failed Restart Server! Exception: " + e.getMessage());
+      serverLogger.log("Failed Restart Server! Exception: " + e.getMessage());
     }
     return false;
   }

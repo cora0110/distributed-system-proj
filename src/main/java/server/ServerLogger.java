@@ -4,7 +4,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class ServerLog {
+public class ServerLogger {
   /**
    * Gets the timestamp with the current system time in millisecond precision and a human-readable
    * time format
