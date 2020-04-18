@@ -14,8 +14,10 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private String centralName;
   private int[] serverPorts;
   private ServerLogger serverLogger;
-  private Map<Integer, Boolean> serverStatus; // port -> status
+  // 0 -> empty, 1 -> bush, 2 -> die
+  private Map<Integer, Integer> serverStatus;
 
+  //TODO check serverPorts.length > 1 in main
   public CentralServer(String host, int currPort, int[] serverPorts) throws RemoteException {
     this.host = host;
     this.centralPort = currPort;
@@ -23,35 +25,11 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     this.serverPorts = serverPorts;
     this.serverStatus = new HashMap();
     for (int port : this.serverPorts) {
-      new Server(port);
-      this.serverStatus.put(port, true);
+      new Server(port, centralPort);
+      this.serverStatus.put(port, 0);
     }
     serverLogger = new ServerLogger();
     bindRMI();
-  }
-
-  public String getHost() {
-    return host;
-  }
-
-  public void setHost(String host) {
-    this.host = host;
-  }
-
-  public int getCentralPort() {
-    return centralPort;
-  }
-
-  public void setCentralPort(int centralPort) {
-    this.centralPort = centralPort;
-  }
-
-  public int[] getServerPorts() {
-    return serverPorts;
-  }
-
-  public void setServerPorts(int[] serverPorts) {
-    this.serverPorts = serverPorts;
   }
 
   /**
@@ -63,14 +41,14 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       registry.rebind(centralName, this);
       serverLogger.log(centralName + " is running...");
     } catch (Exception e) {
-      serverLogger.log(e.getMessage());
+      serverLogger.log(centralName, e.getMessage());
     }
   }
 
   @Override
   public int assignAliveServerToClient() {
     int serverChosen = generateRandomNumber(serverPorts.length);
-    while (!this.serverStatus.get(serverPorts[serverChosen])) {
+    while (this.serverStatus.get(serverPorts[serverChosen]) != 0) {
       serverChosen = (serverChosen + 1) % serverPorts.length;
     }
     return serverPorts[serverChosen];
@@ -82,15 +60,15 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       Registry registry = LocateRegistry.getRegistry(slaveServerPort);
       ServerInterface stub = (ServerInterface) registry.lookup("Server" + slaveServerPort);
       stub.kill();
-      serverStatus.put(slaveServerPort, false);
+      serverStatus.put(slaveServerPort, 2);
     } catch (Exception e) {
-      serverLogger.log("Failed Restart Slave Server! Exception: " + e.getMessage());
+      serverLogger.log(centralName, e.getMessage());
     }
   }
 
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
-    new Server(slaveServerPort);
+    new Server(slaveServerPort, centralPort);
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
       try {
@@ -98,21 +76,43 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
         ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
 
         stub.helpRestartServer(slaveServerPort);
-        serverStatus.put(slaveServerPort, true);
+        serverStatus.put(slaveServerPort, 0);
         break;
       } catch (Exception e) {
-        serverLogger.log("Failed Restart Slave Server! Exception: " + e.getMessage());
+        serverLogger.log(centralName, e.getMessage());
       }
     }
-    serverLogger.log("No alive slave server found!");
+    serverLogger.log(centralName, "No alive slave server found!");
   }
 
-  /**
-   * Randomly get a number in range 0 and n - 1
-   *
-   * @param n int
-   * @return int
-   */
+  @Override
+  public int getServerStatus(int port) throws RemoteException {
+    if(serverStatus.get(port) == null) return -1;
+    return serverStatus.get(port);
+  }
+
+  @Override
+  public void setServerStatus(int port, int status) throws RemoteException {
+    serverStatus.put(port, status);
+  }
+
+  @Override
+  public void receiveNotification(String message) throws RemoteException {
+    serverLogger.log(centralName, message);
+  }
+
+  @Override
+  public int[] getPeers(int toPort) throws RemoteException {
+    int[] peers = new int[serverPorts.length - 1];
+    int i = 0;
+    for(int serverPort: serverPorts) {
+      if(serverPort == toPort) continue;
+      peers[i] = serverPort;
+      i++;
+    }
+    return peers;
+  }
+
   private int generateRandomNumber(int n) {
     Random random = new Random();
     return random.nextInt(n);

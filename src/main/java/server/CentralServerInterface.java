@@ -11,5 +11,11 @@ public interface CentralServerInterface extends Remote {
 
   void restartSlaveServer(int slaveServerPort) throws RemoteException;
 
+  int getServerStatus(int port) throws RemoteException;
 
+  void setServerStatus(int port, int status) throws RemoteException;
+
+  void receiveNotification(String message) throws RemoteException;
+
+  int[] getPeers(int toPort) throws RemoteException;
 }

@@ -13,19 +13,17 @@ import model.User;
 
 public interface ServerInterface extends Remote {
 
-  Result prepare(UUID transactionID) throws RemoteException;
+  boolean prepare(UUID transaction, CommitParams commitParams) throws RemoteException;
 
-  PrepareAck participantsPrepare(UUID transactionID) throws RemoteException;
+  boolean receivePrepare(UUID transaction, CommitParams commitParams) throws RemoteException;
 
-  Result accept(UUID transactionID) throws RemoteException;
+  boolean commitOrAbort(UUID transaction) throws RemoteException;
 
-  AcceptAck participantsAccept(UUID transactionID, CommitParams commitParams) throws RemoteException;
+  void receiveCommit(UUID transaction) throws RemoteException;
 
-  Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException;
+  void receiveAbort(UUID transaction) throws RemoteException;
 
-  Result initDocument(String docName, User user) throws RemoteException;
-
-  Result initSection(int sectionNum, User user) throws RemoteException;
+  void executeCommit(CommitParams commitParams) throws RemoteException;
 
   Result createUser(User user) throws RemoteException;
 

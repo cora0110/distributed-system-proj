@@ -16,9 +16,10 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import chat.ChatManager;
-import model.AcceptAck;
 import model.CommitEnum;
 import model.CommitParams;
 import model.Document;
@@ -29,23 +30,34 @@ import model.Section;
 import model.User;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
-  public int port;
-  private final String DATA_DIR = "./server_data" + port + "/";
+  public int currPort;
+  private final String DATA_DIR = "./server_data" + currPort + "/";
   public String serverName;
+  private int centralPort;
   private ServerLogger serverLogger;
   private DocumentDatabase documentDatabase;
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
   private ChatManager chatManager;
+  // temporarily store CommitParams info before a transaction commits
+  private ConcurrentMap<UUID, CommitParams> tempStorage;
+  private ConcurrentMap<UUID, ConcurrentMap<Integer, Boolean>> prepareResponseMap;
+  private ConcurrentMap<UUID, ConcurrentMap<Integer, Boolean>> commitResponseMap;
 
-  public Server(int port) throws RemoteException {
-    this.port = port;
-    this.serverName = "Server" + port;
+  public Server(int currPort, int centralPort) throws RemoteException {
+    this.currPort = currPort;
+    this.serverName = "Server" + currPort;
+    this.centralPort = centralPort;
     serverLogger = new ServerLogger();
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
     aliveUserDatabase = new AliveUserDatabase();
     chatManager = new ChatManager();
+
+    tempStorage = new ConcurrentHashMap<>();
+    prepareResponseMap = new ConcurrentHashMap<>();
+    commitResponseMap = new ConcurrentHashMap<>();
+
     bindRMI();
   }
 
@@ -54,7 +66,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
    */
   public void bindRMI() {
     try {
-      Registry registry = LocateRegistry.createRegistry(port);
+      Registry registry = LocateRegistry.createRegistry(currPort);
       registry.rebind(serverName, this);
       serverLogger.log(serverName + " is running...");
     } catch (Exception e) {
@@ -62,25 +74,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
   }
 
-  @Override
-  public Result prepare(UUID transactionID) throws RemoteException {
-    return null;
-  }
-
-  @Override
-  public PrepareAck participantsPrepare(UUID transactionID) {
-    return null;
-  }
-
-  @Override
-  public Result accept(UUID transactionID) throws RemoteException {
-    return null;
-  }
-
-  @Override
-  public AcceptAck participantsAccept(UUID transactionID, CommitParams commitParams) {
-    return null;
-  }
 
   @Override
   public Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException {
@@ -114,16 +107,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
         break;
     }
-    return null;
-  }
-
-  @Override
-  public Result initDocument(String docName, User user) throws RemoteException {
-    return null;
-  }
-
-  @Override
-  public Result initSection(int sectionNum, User user) throws RemoteException {
     return null;
   }
 
@@ -479,7 +462,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public void kill() throws RemoteException {
-    Registry registry = LocateRegistry.getRegistry(this.port);
+    Registry registry = LocateRegistry.getRegistry(this.currPort);
     try {
       // TODO: 4/17/20 add store database. shutdown hook
       registry.unbind(this.serverName);
@@ -546,5 +529,35 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       participantsAccept(transactionID, commitParams);
       return new Result(1, "Succeed");
     }
+  }
+
+  @Override
+  public boolean prepare(UUID transaction, CommitParams commitParams) throws RemoteException {
+    return false;
+  }
+
+  @Override
+  public boolean receivePrepare(UUID transaction, CommitParams commitParams) throws RemoteException {
+    return false;
+  }
+
+  @Override
+  public boolean commitOrAbort(UUID transaction) throws RemoteException {
+    return false;
+  }
+
+  @Override
+  public void receiveCommit(UUID transaction) throws RemoteException {
+
+  }
+
+  @Override
+  public void receiveAbort(UUID transaction) throws RemoteException {
+
+  }
+
+  @Override
+  public void executeCommit(CommitParams commitParams) throws RemoteException {
+
   }
 }

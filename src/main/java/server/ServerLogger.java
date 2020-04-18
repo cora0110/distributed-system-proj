@@ -26,4 +26,9 @@ public class ServerLogger {
     System.out.println("[" + getCurrentTimestamp() + "]  " + message);
   }
 
+  public void log(String serverName, String message) {
+    System.out.println("[" + getCurrentTimestamp() + "] [" + serverName + "] " + message);
+  }
+
+
 }
