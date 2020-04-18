@@ -17,7 +17,7 @@ public interface ServerInterface extends Remote {
 
   boolean receivePrepare(UUID transaction, CommitParams commitParams) throws RemoteException;
 
-  boolean commitOrAbort(UUID transaction) throws RemoteException;
+  void commitOrAbort(UUID transaction, boolean ack) throws RemoteException;
 
   void receiveCommit(UUID transaction) throws RemoteException;
 

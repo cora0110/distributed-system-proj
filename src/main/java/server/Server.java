@@ -522,42 +522,83 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
-    PrepareAck prepareAck = participantsPrepare(transactionID);
-    if (prepareAck.numOfAcks < 5) {
-      return new Result(0, "Request aborted.");
+    if(!prepare(transactionID, commitParams)) {
+      commitOrAbort(transactionID, false);
+      return new Result(0, "Request Aborted.");
     } else {
-      participantsAccept(transactionID, commitParams);
-      return new Result(1, "Succeed");
+      commitOrAbort(transactionID, true);
+      return new Result(1, "Request Commited.");
     }
   }
 
   @Override
-  public boolean prepare(UUID transaction, CommitParams commitParams) throws RemoteException {
+  public boolean prepare(UUID transaction, CommitParams commitParams) {
     return false;
   }
 
   @Override
-  public boolean receivePrepare(UUID transaction, CommitParams commitParams) throws RemoteException {
+  public boolean receivePrepare(UUID transaction, CommitParams commitParams) {
     return false;
   }
 
   @Override
-  public boolean commitOrAbort(UUID transaction) throws RemoteException {
-    return false;
+  public void commitOrAbort(UUID transaction, boolean ack) {
   }
 
   @Override
-  public void receiveCommit(UUID transaction) throws RemoteException {
-
-  }
-
-  @Override
-  public void receiveAbort(UUID transaction) throws RemoteException {
+  public void receiveCommit(UUID transaction) {
 
   }
 
   @Override
-  public void executeCommit(CommitParams commitParams) throws RemoteException {
+  public void receiveAbort(UUID transaction) {
 
+  }
+
+  @Override
+  public void executeCommit(CommitParams commitParams) {
+
+  }
+
+  private int getServerStatus(int port) {
+    try {
+      Registry registry = LocateRegistry.getRegistry(centralPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      return stub.getServerStatus(port);
+    } catch(Exception e) {
+      serverLogger.log(serverName, "Exception: " + e.getMessage());
+      return -1;
+    }
+  }
+
+  private void setServerStatus(int port, int status) {
+    try {
+      Registry registry = LocateRegistry.getRegistry(centralPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      stub.setServerStatus(port, status);
+    } catch(Exception e) {
+      serverLogger.log(serverName, "Exception: " + e.getMessage());
+    }
+  }
+
+  private int[] getPeers(int currPort) {
+    try {
+      Registry registry = LocateRegistry.getRegistry(centralPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      return stub.getPeers(currPort);
+    } catch(Exception e) {
+      serverLogger.log(serverName, "Exception: " + e.getMessage());
+      return null;
+    }
+  }
+
+  private void sendMessageToCentral(String message) {
+    try {
+      Registry registry = LocateRegistry.getRegistry(centralPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      stub.receiveNotification(message);
+    } catch(Exception e) {
+      serverLogger.log(serverName, "Exception: " + e.getMessage());
+    }
   }
 }
