@@ -127,7 +127,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         if (result.getStatus() == 0) {
           return new Result(0, "Request aborted.");
         }
-        String token = aliveUserDatabase.getTokenbyUser(user);
+        String token = aliveUserDatabase.getTokenByUser(user.getUsername());
 
         if (token != null) {
           // TODO: NOTIFICATION THREAD
