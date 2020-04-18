@@ -19,11 +19,11 @@ public interface ServerInterface extends Remote {
 
   void commitOrAbort(UUID transactionID, boolean ack) throws RemoteException;
 
-  void receiveCommit(UUID transactionID) throws RemoteException;
+  boolean receiveCommit(UUID transactionID) throws RemoteException;
 
-  void receiveAbort(UUID transactionID) throws RemoteException;
+  boolean receiveAbort(UUID transactionID) throws RemoteException;
 
-  void executeCommit(CommitParams commitParams) throws RemoteException;
+  void executeCommit(UUID transactionID) throws RemoteException;
 
   Result createUser(User user) throws RemoteException;
 

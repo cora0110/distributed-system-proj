@@ -622,20 +622,103 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public void commitOrAbort(UUID transactionID, boolean ack) {
+    int[] peers = getPeers(currPort);
+    int numOfPeers = peers.length;
+    commitResponseMap.put(transactionID, new ConcurrentHashMap<>());
+
+    if(ack) {
+      serverLogger.log(serverName, "Commit: sent");
+      for(int peerPort: peers) {
+        try {
+          Registry registry = LocateRegistry.getRegistry(peerPort);
+          ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+          boolean commitAck = stub.receiveCommit(transactionID);
+          commitResponseMap.get(transactionID).put(peerPort, commitAck);
+        } catch(Exception e) {
+          serverLogger.log(serverName, "Exception: " + e.getMessage());
+        }
+      }
+    }else {
+      serverLogger.log(serverName, "Abort: sent");
+      for(int peerPort: peers) {
+        Boolean prepareAck = prepareResponseMap.get(transactionID).get(peerPort);
+        if(prepareAck != null && prepareAck) {
+          try {
+            Registry registry = LocateRegistry.getRegistry(peerPort);
+            ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+            boolean commitAck = stub.receiveAbort(transactionID);
+            commitResponseMap.get(transactionID).put(peerPort, commitAck);
+          } catch(Exception e) {
+            serverLogger.log(serverName, "Exception: " + e.getMessage());
+          }
+        }
+      }
+    }
+
+    int ackCount;
+    int retry = 3;
+    while(retry > 0) {
+      if(retry < 3) {
+        try {
+          // pause for 2 secs
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          serverLogger.log(serverName, e.getMessage());
+        }
+      }
+
+      ackCount = 0;
+      retry--;
+
+      Map<Integer, Boolean> ackMap = commitResponseMap.get(transactionID);
+
+      for(int peerPort: peers) {
+        if(ackMap.get(peerPort) != null) {
+          ackCount++;
+        }
+      }
+
+      if(ackCount == numOfPeers) break;
+    }
+
+    for(int peerPort: peers) {
+      if(commitResponseMap.get(transactionID).get(peerPort) == null) {
+        setServerStatus(peerPort, 2);
+        sendMessageToCentral("Server" + peerPort + " is down!");
+      }
+    }
+
+    if(ack) executeCommit(transactionID);
+    // clean up all temp data and state
+    tempStorage.remove(transactionID);
+    prepareResponseMap.remove(transactionID);
+    commitResponseMap.remove(transactionID);
+    setServerStatus(currPort, 0);
   }
 
   @Override
-  public void receiveCommit(UUID transactionID) {
-
+  public boolean receiveCommit(UUID transactionID) {
+    serverLogger.log(serverName, "Commit: received");
+    CommitParams commitParams = tempStorage.get(transactionID);
+    if(commitParams == null) {
+      throw new IllegalArgumentException("The commitParams need to commit cannot be found.");
+    }
+    executeCommit(transactionID);
+    tempStorage.remove(transactionID);
+    setServerStatus(currPort, 0);
+    return true;
   }
 
   @Override
-  public void receiveAbort(UUID transactionID) {
-
+  public boolean receiveAbort(UUID transactionID) {
+    serverLogger.log(serverName, "Abort: received");
+    tempStorage.remove(transactionID);
+    setServerStatus(currPort, 0);
+    return true;
   }
 
   @Override
-  public void executeCommit(CommitParams commitParams) {
+  public void executeCommit(UUID transactionID) {
 
   }
 
