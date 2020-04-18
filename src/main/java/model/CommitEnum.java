@@ -1,0 +1,18 @@
+package model;
+
+public enum CommitEnum {
+  PUT,
+  DELETE,
+  UPDATE_OCCUPANT,
+  UPDATE_AUTHOR,
+  UPDATE_SECTION,
+  SHARE,
+  CHAT,
+  LOGIN,
+  LOGOUT,
+  EDIT,
+  EDIT_END,
+  CREATE_DOCUMENT,
+  CREATE_USER
+  ;
+}
