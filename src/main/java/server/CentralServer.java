@@ -27,6 +27,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       this.serverStatus.put(port, true);
     }
     serverLog = new ServerLog();
+    bindRMI();
   }
 
   public String getHost() {
@@ -115,5 +116,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private int generateRandomNumber(int n) {
     Random random = new Random();
     return random.nextInt(n);
+  }
+
+  public static void main(String[] args) throws Exception {
+    CentralServer centralServer = new CentralServer("127.0.0.1", 12345, new int[]{12341, 12342});
   }
 }
