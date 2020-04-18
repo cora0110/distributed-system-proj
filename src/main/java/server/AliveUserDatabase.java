@@ -1,21 +1,24 @@
 package server;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import model.User;
 
 public class AliveUserDatabase {
-  ConcurrentHashMap<String, OnlineUserRecord> onlineUsers;
+  ConcurrentHashMap<String, OnlineUserRecord> aliveUsers;
+  private ReentrantReadWriteLock mutex;
 
   /**
    * Initializes the underlining {@code ConcurrentHashMap}.
    */
   AliveUserDatabase() {
-    onlineUsers = new ConcurrentHashMap<>();
+    aliveUsers = new ConcurrentHashMap<>();
+    mutex = new ReentrantReadWriteLock();
   }
 
   /**
-   * Logs a {@code User} instance into the {@code OnlineUsersDB} letting it pass to the online
+   * Logs a {@code User} instance into the {@code AliveUsersDB} letting it pass to the online
    * state.
    * <p>
    * Only one valid token at a time can exist but it would result senseless to look for a
@@ -28,9 +31,26 @@ public class AliveUserDatabase {
   String login(User user) {
     if (user == null) return null;
     OnlineUserRecord record = new OnlineUserRecord(user);
-    // Trying to remove old values would be useless because put method already does it smoothly
-    onlineUsers.put(user.getUsername(), record);
+    mutex.writeLock().lock();
+    aliveUsers.put(user.getUsername(), record);
+    mutex.writeLock().unlock();
     return record.getToken();
+  }
+
+
+  /**
+   * When logout, remove the user from the aliveUserDatabase.
+   * @param user
+   * @return
+   */
+  boolean logout(User user){
+    if (user==null) return false;
+    if (!isLoggedIn(user.getUsername())) return false;
+
+    mutex.writeLock().lock();
+    aliveUsers.remove(user.getUsername());
+    mutex.writeLock().unlock();
+    return true;
   }
 
   /**
@@ -40,17 +60,17 @@ public class AliveUserDatabase {
    * @return user reference or null if error occurs
    */
   User getUserByToken(String token) {
-    for (OnlineUserRecord record : onlineUsers.values())
+    for (OnlineUserRecord record : aliveUsers.values())
       if (record.verifyToken(token)) return record.getUser();
     return null;
   }
 
   String getTokenByUser(String username) {
-    return onlineUsers.get(username).getToken();
+    return aliveUsers.get(username).getToken();
   }
 
   public boolean isLoggedIn(String username) {
-    return onlineUsers.containsKey(username);
+    return aliveUsers.containsKey(username);
   }
 
 

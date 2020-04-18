@@ -25,7 +25,7 @@ public class UserDatabase {
    *
    * @param username user's username
    * @param password user's password
-   * @return the user object if exists and the credentials are valid, false otherwise
+   * @return the user object if exists and the credentials are valid, null otherwise
    */
   User doLogin(String username, String password) {
     try {
