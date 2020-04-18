@@ -3,15 +3,19 @@ package server;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.SequenceInputStream;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.List;
 import java.util.UUID;
 import java.util.Vector;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import chat.ChatManager;
 import model.AcceptAck;
@@ -22,7 +26,6 @@ import model.Request;
 import model.Result;
 import model.Section;
 import model.User;
-import notification.NotiServerRunnable;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int port;
@@ -31,11 +34,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private DocumentDatabase documentDatabase;
   private AliveUserDatabase aliveUserDatabase;
   private UserDatabase userDatabase;
-  private ReentrantReadWriteLock readWriteLock;
-
   private ChatManager chatManager;
-
-  private NotiServerRunnable notificationThread;
 
   private final String DATA_DIR = "./server_data" + port + "/";
 
@@ -46,6 +45,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
     aliveUserDatabase = new AliveUserDatabase();
+    chatManager = new ChatManager();
     bindRMI();
   }
 
@@ -130,8 +130,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         String token = aliveUserDatabase.getTokenByUser(user.getUsername());
 
         if (token != null) {
-          // TODO: NOTIFICATION THREAD
-//          notificationThread = new NotiServerRunnable(user, socket.getInetAddress().getHostName(), (Integer) args[2]);
+//           TODO: NOTIFICATION THREAD? test
+//          notificationThread = new NotiServerRunnable(user, this);
 //          notificationThread.run();
           System.out.println("New user logged in: " + user.getUsername());
           return new Result(1, token);
@@ -146,9 +146,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result logout(User user) throws RemoteException {
-    // TODO: NOTIFICATION THREAD
-    notificationThread.stop();
-
     // TODO: ANY NEED TO DO 2PC?
     CommitParams commitParams =
             new CommitParams(user, 0, null, null, -1, 1);
@@ -163,7 +160,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   }
 
-  //TODO: CDA MANAGER NOT ADDED HERE
   @Override
   public Result edit(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -205,7 +201,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     try {
       InputStream inputStream = new FileInputStream(section.getPath());
       SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
-      return new Result(1, "Succeed", remoteInputStream);
+      // assign multicast address
+      long chatAddress = chatManager.getChatAddress(document);
+      return new Result(1, String.valueOf(chatAddress), remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "IO Exception while accessing the section");
     }
@@ -378,15 +376,30 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "You do not have access.");
     }
 
+    document.addAuthor(request.getTargetUser());
+    //TODO push notification
+    User sharedUser = userDatabase.getUserByUsername(request.getTargetUser().getUsername());
+    sharedUser.getUnreadNotifications().add("User " +
+            request.getTargetUser().getUsername() + " can now access the document " + document.getName());
+
+    // TODO: 4/17/20 assign share access to other servers, shutdown hook
     CommitParams commitParams = new CommitParams(request.getTargetUser(), 4,
             null, request.getDocName(), -1, 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
-      // TODO: 4/17/20 assign to other servers, shutdown hook
       return new Result(1, "Succeed");
     } else {
       return new Result(0, "Request aborted");
     }
+  }
+
+  @Override
+  public Result getNotifications(User user) throws RemoteException {
+    User userDB = userDatabase.getUserByUsername(user.getUsername());
+    List<String> unreadNotifications = userDB.getUnreadNotifications();
+    Result result = new Result();
+    result.setUnreadNotifications(unreadNotifications);
+    return result;
   }
 
   @Override

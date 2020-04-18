@@ -6,8 +6,12 @@ import java.net.MulticastSocket;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.Getter;
+import lombok.Setter;
 import model.Message;
 
+@Getter
+@Setter
 public class Receiver implements Runnable {
 
   private List<Message> messages;
@@ -16,10 +20,11 @@ public class Receiver implements Runnable {
   private boolean isAlive;
   private InetAddress address;
 
-  public Receiver() {
+  public Receiver() throws Exception {
     this.messages = new ArrayList<>();
     this.buffer = new byte[2048];
     this.isAlive = true;
+    this.socket = new MulticastSocket();
   }
 
   @Override
@@ -37,11 +42,11 @@ public class Receiver implements Runnable {
     }
   }
 
-  public void setNewGroup(InetAddress address) throws Exception {
+  public void setNewGroup(long address) throws Exception {
     if (socket != null) {
-      this.address = address;
-      this.socket.joinGroup(address);
-      this.socket = new MulticastSocket();
+      InetAddress inetAddress = ChatManager.longToAddress(address);
+      this.address = inetAddress;
+      this.socket.joinGroup(inetAddress);
     }
   }
 

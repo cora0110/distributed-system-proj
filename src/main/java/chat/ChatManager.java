@@ -66,7 +66,7 @@ public class ChatManager {
   /**
    * Converts a long value to its InetAddress representation.
    */
-  static InetAddress longToAddress(long address) throws UnknownHostException {
+  public static InetAddress longToAddress(long address) throws UnknownHostException {
     return InetAddress.getByName(String.valueOf(address));
   }
 

@@ -2,6 +2,8 @@ package model;
 
 import java.io.Serializable;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +15,7 @@ public class User implements Serializable {
 
   private String username;
   private String password;
+  private List<String> notifications;
 
   public User(String username, String password) {
     this.username = username;
@@ -56,6 +59,30 @@ public class User implements Serializable {
       sb.append(String.format("%02x", b));
     }
     return sb.toString();
+  }
+
+  /**
+   * Gets all the unread notifications to this user associated.
+   *
+   * @return notifications strings array
+   */
+  public List<String> getUnreadNotifications() {
+    synchronized (notifications) {
+      List<String> unreadNotifications = new ArrayList<>(notifications);
+      this.notifications.clear();
+      return unreadNotifications;
+    }
+  }
+
+  /**
+   * Add a new notification value to the unread ones.
+   *
+   * @param doc new document which user has access to
+   */
+  void pushNewNotification(String doc) {
+    synchronized (notifications) {
+      notifications.add(doc);
+    }
   }
 
 }

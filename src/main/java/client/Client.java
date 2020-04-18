@@ -10,6 +10,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -23,10 +25,10 @@ import java.util.Scanner;
 
 import chat.Receiver;
 import chat.Sender;
+import model.Message;
 import model.Request;
 import model.Result;
 import model.User;
-import notification.NotiClientRunnable;
 import server.CentralServerInterface;
 import server.ServerInterface;
 
@@ -35,20 +37,23 @@ public class Client {
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
   private static int CENTRAL_SERVER_RMI_PORT = 12354;
 
+  private ServerInterface serverInterface;
   private Sender messageSender;
   private Receiver messageReceiver;
   private NotiClientRunnable notiClientRunnable;
-
   private LocalSession session;
+  private User user;
 
   public Client() {
-    messageReceiver = new Receiver();
-    notiClientRunnable = new NotiClientRunnable();
+    try {
+      messageReceiver = new Receiver();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    notiClientRunnable = new NotiClientRunnable(serverInterface);
   }
 
-  private static int TCP_PORT = 1337;
   public static int UDP_PORT = 1338;
-  //  private static int RMI_PORT = 3400;
   private static String DATA_DIR = "./client_data/";
 
 
@@ -63,13 +68,11 @@ public class Client {
    * @see DataOutputStream
    */
   private void connect() throws Exception {
-    notiClientRunnable.run();
-//    clientSocket = new Socket();
-//    clientSocket.connect(new InetSocketAddress(SERVER_ADDRESS, TCP_PORT));
-//    clientOutputStream = new DataOutputStream(clientSocket.getOutputStream());
-//    clientInputStream = new DataInputStream(clientSocket.getInputStream());
-//    Registry registry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-//    centralServerInterface = (CentralServerInterface) registry.lookup(CentralServerInterface.class.getSimpleName());
+    Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
+    CentralServerInterface centralServerInterface = (CentralServerInterface) centralRegistry.lookup(CentralServerInterface.class.getSimpleName());
+    int port = centralServerInterface.assignAliveServerToClient();
+    Registry registry = LocateRegistry.getRegistry(port);
+    serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
     messageReceiver.run();
     messageSender = new Sender();
     if (messageSender == null) throw new IOException();
@@ -104,7 +107,6 @@ public class Client {
   public static void main(String[] args) {
     checkDataDirectory();
     Client client = new Client();
-
     try {
       client.connect();
       client.commandDispatchingLoop();
@@ -129,14 +131,14 @@ public class Client {
                     "  help: to show this help message\n\n" +
                     "  register USER PWD: to register a new account with username USER and password PWD\n" +
                     "  login USER PWD: to login using USER and PWD credentials\n" +
-                    "  create DOC SEC: to create a new document named DOC and containing SEC sections\n" +
-                    "  edit DOC SEC (TMP): to edit the section SEC of DOC document (using TMP temporary filename)\n" +
+                    "  create DOC SEC: to create a new document named DOC and contains SEC sections\n" +
+                    "  edit DOC SEC:(TMP) to edit the section SEC of DOC document (using TMP temporary filename)\n" +
                     "  endedit: to stop the current editing session\n" +
-                    "  showsec DOC SEC (OUT): to download the content of the SEC section of DOC document (using OUT output filename)\n" +
-                    "  showdoc DOC (OUT): to download the content concatenation of all the document's sections (using OUT output filename)\n" +
+                    "  showsec DOC SEC:(OUT) to download the content of the SEC section of DOC document (using OUT output filename)\n" +
+                    "  showdoc DOC:(OUT) to download the content concatenation of all the document's sections (using OUT output filename)\n" +
                     "  logout: to logout\n" +
                     "  list: to list all the documents you are able to see and edit\n" +
-                    "  share USER DOC: to share a document with someone\n" +
+                    "  share USER DOC: to share a document with another user\n" +
                     "  news: to get all the news\n\n" +
                     "  receive: to retrieve all the unread chat messages\n" +
                     "  send TEXT: to send the TEXT message regarding the document being edited";
@@ -155,7 +157,7 @@ public class Client {
     Scanner input = new Scanner(System.in);
     boolean isAlive = true;
     while (isAlive) {
-      System.out.print("turing@127.0.0.1# ");
+      System.out.print("collaborative@127.0.0.1# ");
       String argsLine = input.nextLine();
       String[] args = argsLine.split(" ");
       if (argsLine.length() > 0 && args.length > 0) {
@@ -185,7 +187,7 @@ public class Client {
                 String username = args[1];
                 String password = args[2];
                 // TODO: 4/17/20
-                login(username, password, 0);
+                login(username, password);
               } else throw new IllegalArgumentException();
               break;
             case "create":
@@ -212,7 +214,7 @@ public class Client {
                 }
               } else throw new IllegalArgumentException();
               break;
-            case "stopedit":
+            case "endedit":
               editEnd();
               break;
             case "showsec":
@@ -301,9 +303,7 @@ public class Client {
    */
   private boolean register(String username, String password) {
     try {
-      ServerInterface serverInterface = this.retrieveServer();
-      Result result = serverInterface.createUser(new User(username, password));
-      // TODO: 4/16/20
+      serverInterface.createUser(new User(username, password));
       return true;
     } catch (Exception e) {
       return false;
@@ -316,18 +316,18 @@ public class Client {
    * <p>
    * It starts a new {@code LocalSession} object that collects all the session's information.
    *
-   * @param username         user username
-   * @param password         user password
-   * @param notificationPort
+   * @param username user username
+   * @param password user password
    */
-  private void login(String username, String password, int notificationPort) throws Exception {
-    // TODO: 4/16/20
+  private void login(String username, String password) throws Exception {
     if (session == null) {
-      ServerInterface serverInterface = this.retrieveServer();
       Result result = serverInterface.login(new User(username, password));
       String token = result.getMessage();
+      user = new User(username);
+      notiClientRunnable.setUser(user);
+      notiClientRunnable.run();
       session = new LocalSession(token, username);
-      System.out.println("Correctly logged in as " + username);
+      System.out.println("Logged in successfully as " + username);
     } else {
       System.err.println("You're already logged in.");
     }
@@ -340,8 +340,9 @@ public class Client {
     if (session != null) {
       if (!session.isEditing()) {
         session = null;
-//        notificationThread.clearNotificationList();
-        ServerInterface serverInterface = this.retrieveServer();
+        notiClientRunnable.clearNotificationList();
+        notiClientRunnable.setUser(null);
+        notiClientRunnable.stop();
         serverInterface.logout(new User(session.getUsername()));
       } else System.err.println("You should 'stopedit' before logging out");
     } else System.err.println("You're not logged in");
@@ -359,7 +360,7 @@ public class Client {
       Request request = new Request();
       request.setDocName(docName);
       request.setSectionNum(secNumber);
-      this.retrieveServer().createDocument(user, request);
+      serverInterface.createDocument(user, request);
     } else System.err.println("You're not logged in");
   }
 
@@ -378,7 +379,6 @@ public class Client {
       try (FileChannel fileChannel = FileChannel.open(Paths.get(filepath), StandardOpenOption.CREATE,
               StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
            OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        ServerInterface serverInterface = this.retrieveServer();
         Request request = new Request();
         request.setDocName(docName);
         request.setSectionNum(secNumber);
@@ -386,15 +386,13 @@ public class Client {
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         fileStream.write(inputStream.read());
 
-        // TODO: 4/16/20
-//        String address = null;
         session.setOccupiedFilename(filepath);
-//        long dAddress = Long.parseLong(address);
-//        try {
-//          messageReceiver.setNewGroup(address);
-//        } catch (IOException ex) {
-//          ex.printStackTrace();
-//        }
+        long address = Long.parseLong(result.getMessage());
+        try {
+          messageReceiver.setNewGroup(address);
+        } catch (Exception ex) {
+          ex.printStackTrace();
+        }
       } catch (IOException ex) {
         printException(ex);
       }
@@ -411,7 +409,6 @@ public class Client {
         try (FileChannel fileChannel = FileChannel.open(Paths.get(session.getOccupiedFilename()), StandardOpenOption.READ);
              InputStream stream = Channels.newInputStream(fileChannel)) {
           session.setOccupiedFilename(null);
-          ServerInterface serverInterface = this.retrieveServer();
           RemoteInputStreamServer remoteFileData = new SimpleRemoteInputStream(stream);
           Request request = new Request();
           String[] path = session.getOccupiedFilename().split("_");
@@ -419,8 +416,8 @@ public class Client {
           request.setSectionNum(Integer.parseInt(path[1]));
           request.setRemoteInputStream(remoteFileData);
           serverInterface.editEnd(new User(session.getUsername()), request);
-//            messageReceiver.setNewGroup(0L);
-        } catch (IOException ex) {
+          messageReceiver.setNewGroup(0L);
+        } catch (Exception ex) {
           printException(ex);
         }
       } else System.err.println("You're not editing any section");
@@ -443,7 +440,6 @@ public class Client {
       String filename = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
       try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
            OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        ServerInterface serverInterface = this.retrieveServer();
         Request request = new Request();
         request.setDocName(docName);
         request.setSectionNum(secNumber);
@@ -466,7 +462,6 @@ public class Client {
    */
   private void documentsList() throws Exception {
     if (session != null) {
-      ServerInterface serverInterface = this.retrieveServer();
       Request request = new Request();
       request.setToken(session.getSessionToken());
       Result result = serverInterface.listOwnedDocs(new User(session.getUsername()), request);
@@ -483,11 +478,9 @@ public class Client {
    * @param docName document's name
    */
   private void share(String user, String docName) throws Exception {
-    ServerInterface serverInterface = this.retrieveServer();
     Request request = new Request();
     request.setToken(session.getSessionToken());
     serverInterface.shareDoc(new User(session.getUsername()), request);
-//    Communication.send(clientOutputStream, clientInputStream, System.out::println, System.err::println, Commands.SHARE, user, docName);
   }
 
   /**
@@ -503,7 +496,6 @@ public class Client {
       String filename = DATA_DIR + (outputName == null ? docName : outputName);
       try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
            OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        ServerInterface serverInterface = this.retrieveServer();
         Request request = new Request();
         request.setDocName(docName);
         request.setToken(session.getSessionToken());
@@ -537,13 +529,13 @@ public class Client {
    * Shows all the received {@code ChatMessage}s received since the last method invocation.
    */
   private void showMessages() {
-//    if (session != null) {
-//      if (session.isEditing()) {
-//        ChatMessage[] unreadMessages = messageReceiver.getMessages();
-//        for (ChatMessage message : unreadMessages)
-//          System.out.println(message);
-//      } else System.err.println("You're not editing any document");
-//    } else System.err.println("You're not logged in");
+    if (session != null) {
+      if (session.isEditing()) {
+        List<Message> messages = messageReceiver.retrieve();
+        for (Message message : messages)
+          System.out.println(message);
+      } else System.err.println("You're not editing any document");
+    } else System.err.println("You're not logged in");
   }
 
   /**
@@ -553,20 +545,20 @@ public class Client {
    * @param text message text
    */
   private void sendMessage(String text) {
-//    if (session != null) {
-//      if (session.isEditing()) {
-//        InetAddress multicastAddress;
-//        if ((multicastAddress = messageReceiver.getActiveGroup()) != null) {
-//          try {
-//            ChatMessage message = new ChatMessage(session.getUsername(), text);
-//            InetSocketAddress groupAddress = new InetSocketAddress(multicastAddress, UDP_PORT);
-//            messageSender.sendMessage(message, groupAddress);
-//          } catch (IOException ex) {
-//            printException(ex);
-//          }
-//        } else System.err.println("Generic message sending error");
-//      } else System.err.println("You're not editing any document");
-//    } else System.err.println("You're not logged in");
+    if (session != null) {
+      if (session.isEditing()) {
+        InetAddress multicastAddress;
+        if ((multicastAddress = messageReceiver.getAddress()) != null) {
+          try {
+            Message message = new Message(session.getUsername(), text, System.currentTimeMillis());
+            InetSocketAddress groupAddress = new InetSocketAddress(multicastAddress, UDP_PORT);
+            messageSender.sendMessage(message, groupAddress);
+          } catch (Exception ex) {
+            printException(ex);
+          }
+        } else System.err.println("Generic message sending error");
+      } else System.err.println("You're not editing any document");
+    } else System.err.println("You're not logged in");
   }
 
   /**
