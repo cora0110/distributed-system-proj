@@ -14,6 +14,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -527,31 +528,109 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Request Aborted.");
     } else {
       commitOrAbort(transactionID, true);
-      return new Result(1, "Request Commited.");
+      return new Result(1, "Request Committed.");
     }
   }
 
   @Override
-  public boolean prepare(UUID transaction, CommitParams commitParams) {
+  public boolean prepare(UUID transactionID, CommitParams commitParams) {
+    if(getServerStatus(currPort) != 0) return false;
+    // change current server status: Empty -> Busy
+    setServerStatus(currPort, 1);
+    // add the <transactionID, CommitParams> to tempStorage
+    addToTempStorage(transactionID, commitParams);
+
+    int[] peers = getPeers(currPort);
+    int numOfPeers = peers.length;
+
+    // put transactionID into prepareResponseMap
+    prepareResponseMap.put(transactionID, new ConcurrentHashMap<>());
+    serverLogger.log(serverName, "Prepare: sent");
+    for(int peerPort: peers) {
+      try {
+        Registry registry = LocateRegistry.getRegistry(peerPort);
+        ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+        boolean prepareAck = stub.receivePrepare(transactionID, commitParams);
+        prepareResponseMap.get(transactionID).put(peerPort, prepareAck);
+      } catch(Exception e) {
+        serverLogger.log(serverName, "Exception: " + e.getMessage());
+      }
+    }
+
+    int ackCount = 0;
+    int agreeAckCount = 0;
+    // retry for three times
+    int retry = 3;
+    while(retry > 0) {
+      if(retry < 3) {
+        try {
+          // pause for 1 secs
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          serverLogger.log(serverName, e.getMessage());
+        }
+      }
+      ackCount = 0;
+      agreeAckCount = 0;
+      retry--;
+      Map<Integer, Boolean> ackMap = prepareResponseMap.get(transactionID);
+      for(int peerPort: peers) {
+        if(ackMap.get(peerPort) != null) {
+          if(ackMap.get(peerPort)){
+            ackCount++;
+            agreeAckCount++;
+          } else {
+            ackCount++;
+          }
+        }
+      }
+
+      if(ackCount == numOfPeers) {
+        return agreeAckCount == numOfPeers;
+      }
+    }
+
+    // change status of dead server
+    for(int peerPort: peers) {
+      if(prepareResponseMap.get(transactionID).get(peerPort) == null) {
+        setServerStatus(peerPort, 2);
+        sendMessageToCentral("Server" + peerPort + " is down!");
+      }
+    }
+
+    // if 0 abort ack && receive agree acks from more than half peers, commit, otherwise abort
+    if(ackCount == agreeAckCount && ackCount >= (numOfPeers/2 + 1)) {
+      return true;
+    }
     return false;
   }
 
   @Override
-  public boolean receivePrepare(UUID transaction, CommitParams commitParams) {
-    return false;
+  public boolean receivePrepare(UUID transactionID, CommitParams commitParams) {
+    serverLogger.log(serverName, "Prepare: received");
+    if(getServerStatus(currPort) != 0) {
+      serverLogger.log(serverName, "Abort: sent");
+      return false;
+    } else {
+      setServerStatus(currPort, 1);
+      addToTempStorage(transactionID, commitParams);
+      serverLogger.log(serverName, "Agree: sent");
+      return true;
+    }
+
   }
 
   @Override
-  public void commitOrAbort(UUID transaction, boolean ack) {
+  public void commitOrAbort(UUID transactionID, boolean ack) {
   }
 
   @Override
-  public void receiveCommit(UUID transaction) {
+  public void receiveCommit(UUID transactionID) {
 
   }
 
   @Override
-  public void receiveAbort(UUID transaction) {
+  public void receiveAbort(UUID transactionID) {
 
   }
 
@@ -600,5 +679,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     } catch(Exception e) {
       serverLogger.log(serverName, "Exception: " + e.getMessage());
     }
+  }
+
+  private void addToTempStorage(UUID transactionID, CommitParams commitParams) {
+    tempStorage.put(transactionID, commitParams);
   }
 }

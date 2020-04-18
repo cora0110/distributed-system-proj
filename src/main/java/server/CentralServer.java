@@ -14,7 +14,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private String centralName;
   private int[] serverPorts;
   private ServerLogger serverLogger;
-  // 0 -> empty, 1 -> bush, 2 -> die
+  // 0 -> empty, 1 -> busy, 2 -> die
   private Map<Integer, Integer> serverStatus;
 
   //TODO check serverPorts.length > 1 in main

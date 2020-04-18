@@ -13,15 +13,15 @@ import model.User;
 
 public interface ServerInterface extends Remote {
 
-  boolean prepare(UUID transaction, CommitParams commitParams) throws RemoteException;
+  boolean prepare(UUID transactionID, CommitParams commitParams) throws RemoteException;
 
-  boolean receivePrepare(UUID transaction, CommitParams commitParams) throws RemoteException;
+  boolean receivePrepare(UUID transactionID, CommitParams commitParams) throws RemoteException;
 
-  void commitOrAbort(UUID transaction, boolean ack) throws RemoteException;
+  void commitOrAbort(UUID transactionID, boolean ack) throws RemoteException;
 
-  void receiveCommit(UUID transaction) throws RemoteException;
+  void receiveCommit(UUID transactionID) throws RemoteException;
 
-  void receiveAbort(UUID transaction) throws RemoteException;
+  void receiveAbort(UUID transactionID) throws RemoteException;
 
   void executeCommit(CommitParams commitParams) throws RemoteException;
 
