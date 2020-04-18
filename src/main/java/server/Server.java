@@ -24,7 +24,6 @@ import chat.ChatManager;
 import model.CommitEnum;
 import model.CommitParams;
 import model.Document;
-import model.PrepareAck;
 import model.Request;
 import model.Result;
 import model.Section;

@@ -4,9 +4,7 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
 
-import model.AcceptAck;
 import model.CommitParams;
-import model.PrepareAck;
 import model.Request;
 import model.Result;
 import model.User;
