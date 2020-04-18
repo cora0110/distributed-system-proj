@@ -75,42 +75,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
   }
 
-
-  @Override
-  public Result commit(UUID transactionID, CommitParams commitParams) throws RemoteException {
-    switch (commitParams.getCommitEnum()) {
-      case PUT:
-        break;
-
-      case DELETE:
-        break;
-
-      case UPDATE_OCCUPANT:
-        break;
-
-      case UPDATE_AUTHOR:
-        break;
-
-      case UPDATE_SECTION:
-        break;
-
-      case SHARE:
-        // share doc, update local Document database
-        DocumentDatabase documentDatabase = commitParams.getDocumentDatabase();
-        this.documentDatabase = documentDatabase;
-        break;
-
-      case CHAT:
-        this.chatManager = commitParams.getChatManager();
-        break;
-
-      case LOGIN:
-        this.aliveUserDatabase = commitParams.getAliveUserDatabase();
-        break;
-    }
-    return null;
-  }
-
   @Override
   public Result createUser(User user) throws RemoteException {
     String username = user.getUsername();
@@ -688,7 +652,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       }
     }
 
-    if(ack) executeCommit(transactionID);
+    if(ack) {
+      CommitParams commitParams = tempStorage.get(transactionID);
+      if(commitParams == null) {
+        throw new IllegalArgumentException("The commitParams need to commit cannot be found.");
+      }
+      executeCommit(commitParams);
+    }
     // clean up all temp data and state
     tempStorage.remove(transactionID);
     prepareResponseMap.remove(transactionID);
@@ -703,7 +673,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     if(commitParams == null) {
       throw new IllegalArgumentException("The commitParams need to commit cannot be found.");
     }
-    executeCommit(transactionID);
+    executeCommit(commitParams);
     tempStorage.remove(transactionID);
     setServerStatus(currPort, 0);
     return true;
@@ -718,8 +688,39 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   @Override
-  public void executeCommit(UUID transactionID) {
+  public void executeCommit(CommitParams commitParams) {
+    //TODO
+    switch (commitParams.getCommitEnum()) {
+      case PUT:
 
+        break;
+
+      case DELETE:
+        break;
+
+      case UPDATE_OCCUPANT:
+        break;
+
+      case UPDATE_AUTHOR:
+        break;
+
+      case UPDATE_SECTION:
+        break;
+
+      case SHARE:
+        // share doc, update local Document database
+        DocumentDatabase documentDatabase = commitParams.getDocumentDatabase();
+        this.documentDatabase = documentDatabase;
+        break;
+
+      case CHAT:
+        this.chatManager = commitParams.getChatManager();
+        break;
+
+      case LOGIN:
+        this.aliveUserDatabase = commitParams.getAliveUserDatabase();
+        break;
+    }
   }
 
   private int getServerStatus(int port) {

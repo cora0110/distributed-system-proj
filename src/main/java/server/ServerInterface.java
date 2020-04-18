@@ -23,7 +23,7 @@ public interface ServerInterface extends Remote {
 
   boolean receiveAbort(UUID transactionID) throws RemoteException;
 
-  void executeCommit(UUID transactionID) throws RemoteException;
+  void executeCommit(CommitParams commitParams) throws RemoteException;
 
   Result createUser(User user) throws RemoteException;
 
