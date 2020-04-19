@@ -186,7 +186,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.EDIT);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -242,7 +242,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.EDIT_END);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -276,7 +276,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -401,7 +401,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.SHARE);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -486,6 +486,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
+    // update database stored in commitParams
+    commitParams =
     if(!prepare(transactionID, commitParams)) {
       commitOrAbort(transactionID, false);
       return new Result(0, "Request Aborted.");
@@ -493,6 +495,46 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       commitOrAbort(transactionID, true);
       return new Result(1, "Request Committed.");
     }
+  }
+
+  CommitParams updateCommitParamsDatabase(CommitParams commitParams) {
+    switch (commitParams.getCommitEnum()) {
+      // create user: add new user to userDatabase
+      case CREATE_USER:
+        commitParams.getUserDatabase().addNewUser(commitParams.getUser().getUsername(), commitParams.getUser().getPassword());
+        break;
+      // login: create new OnlineUserRecord (generate token) and put into aliveUserDatabase
+      case LOGIN:
+        commitParams.getAliveUserDatabase().login(commitParams.getUser());
+        break;
+      // logout: set token to null
+      case LOGOUT:
+        String username = commitParams.getUser().getUsername();
+        commitParams.getAliveUserDatabase().getOnlineUserRecord(username).setToken(null);
+        break;
+      // edit: set occupant of the section
+      case EDIT:
+        String docName = commitParams.getDocName();
+        int sectionNum = commitParams.getSectionNum();
+        commitParams.getDocumentDatabase().getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(commitParams.getUser());
+        break;
+      // edit end: write input stream into section path
+      // no need to update database
+      case EDIT_END:
+        break;
+      // create document: create a new document in documentDatabase
+      case CREATE_DOCUMENT:
+        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
+                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
+        break;
+      // share doc: add user to authors of a document in documentDatabase
+      case SHARE:
+        commitParams.getDocumentDatabase().
+                getDocumentByName(commitParams.getDocName()).addAuthor(commitParams.getUser());
+        break;
+    }
+    return commitParams;
   }
 
   @Override
@@ -690,6 +732,11 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public void executeCommit(CommitParams commitParams) {
     //TODO
     switch (commitParams.getCommitEnum()) {
+      case CREATE_USER:
+        userDatabase.addNewUser(commitParams.getUser().getUsername(), commitParams.getUser().getPassword());
+      case LOGIN:
+        this.aliveUserDatabase = commitParams.getAliveUserDatabase();
+        break;
       case PUT:
 
         break;
@@ -716,9 +763,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         this.chatManager = commitParams.getChatManager();
         break;
 
-      case LOGIN:
-        this.aliveUserDatabase = commitParams.getAliveUserDatabase();
-        break;
+
     }
   }
 

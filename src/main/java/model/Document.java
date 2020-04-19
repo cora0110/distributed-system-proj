@@ -51,7 +51,9 @@ public class Document implements Serializable {
   }
 
   public void addAuthor(User user) {
-    authors.add(user);
+    synchronized (authors) {
+      if (!authors.contains(user)) authors.add(user);
+    }
   }
 
   public boolean hasPermit(User user) {

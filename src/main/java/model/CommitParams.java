@@ -20,7 +20,7 @@ public class CommitParams implements Serializable {
   private CommitEnum commitEnum;
   private RemoteInputStream inputStream;
 
-  private String docNanme;
+  private String docName;
   private int sectionNum;
 
   // 0: userDB, 1:aliveUserDB, 2:docDB
