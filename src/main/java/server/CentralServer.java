@@ -39,7 +39,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     try {
       Registry registry = LocateRegistry.createRegistry(centralPort);
       registry.rebind(centralName, this);
-      serverLogger.log(centralName + " is running...");
+      serverLogger.log(centralName, centralName + " is running...");
     } catch (Exception e) {
       serverLogger.log(centralName, e.getMessage());
     }
@@ -71,18 +71,19 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     new Server(slaveServerPort, centralPort);
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
-      try {
-        Registry registry = LocateRegistry.getRegistry(serverPort);
-        ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
-
-        stub.helpRestartServer(slaveServerPort);
-        serverStatus.put(slaveServerPort, 0);
-        break;
-      } catch (Exception e) {
-        serverLogger.log(centralName, e.getMessage());
+      if(getServerStatus(serverPort) == 0) {
+        try {
+          Registry registry = LocateRegistry.getRegistry(serverPort);
+          ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
+          stub.helpRecoverData(slaveServerPort);
+          serverStatus.put(slaveServerPort, 0);
+          break;
+        } catch (Exception e) {
+          serverLogger.log(centralName, e.getMessage());
+        }
       }
     }
-    serverLogger.log(centralName, "No alive slave server found!");
+    serverLogger.log(centralName, "No alive slave server found. Data recovery failed.");
   }
 
   @Override

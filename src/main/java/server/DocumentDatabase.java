@@ -6,7 +6,11 @@ import java.util.List;
 
 import model.Document;
 import model.User;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class DocumentDatabase {
   private static final long serialVersionUID = 1L;
   private List<Document> documents;

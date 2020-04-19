@@ -4,10 +4,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
 
-import model.CommitParams;
-import model.Request;
-import model.Result;
-import model.User;
+import chat.ChatManager;
+import model.*;
 
 public interface ServerInterface extends Remote {
 
@@ -54,11 +52,7 @@ public interface ServerInterface extends Remote {
 
   void kill() throws RemoteException;
 
-  boolean restart(DocumentDatabase documentDatabase,
-                  AliveUserDatabase aliveUserDatabase,
-                  UserDatabase userDatabase) throws RemoteException;
+  boolean recoverData(BackupData backupData) throws RemoteException;
 
-  boolean helpRestartServer(int deadServerPort) throws RemoteException;
-
-
+  boolean helpRecoverData(int targetPort) throws RemoteException;
 }
