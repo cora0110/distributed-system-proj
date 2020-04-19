@@ -1,13 +1,10 @@
 package server;
 
 import com.healthmarketscience.rmiio.RemoteInputStream;
+import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.SequenceInputStream;
+import java.io.*;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -487,7 +484,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
     // update database stored in commitParams
-    commitParams =
+    commitParams = updateCommitParamsDatabase(commitParams);
     if(!prepare(transactionID, commitParams)) {
       commitOrAbort(transactionID, false);
       return new Result(0, "Request Aborted.");
@@ -512,7 +509,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         String username = commitParams.getUser().getUsername();
         commitParams.getAliveUserDatabase().getOnlineUserRecord(username).setToken(null);
         break;
-      // edit: set occupant of the section
+      // edit: set occupant of the section in documentDatabase
       case EDIT:
         String docName = commitParams.getDocName();
         int sectionNum = commitParams.getSectionNum();
@@ -730,40 +727,39 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public void executeCommit(CommitParams commitParams) {
-    //TODO
     switch (commitParams.getCommitEnum()) {
       case CREATE_USER:
-        userDatabase.addNewUser(commitParams.getUser().getUsername(), commitParams.getUser().getPassword());
+        this.userDatabase = commitParams.getUserDatabase();
+        break;
       case LOGIN:
+      case LOGOUT:
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
         break;
-      case PUT:
-
-        break;
-
-      case DELETE:
-        break;
-
-      case UPDATE_OCCUPANT:
-        break;
-
-      case UPDATE_AUTHOR:
-        break;
-
-      case UPDATE_SECTION:
-        break;
-
+      case EDIT:
+      case CREATE_DOCUMENT:
       case SHARE:
-        // share doc, update local Document database
-        DocumentDatabase documentDatabase = commitParams.getDocumentDatabase();
-        this.documentDatabase = documentDatabase;
+        this.documentDatabase = commitParams.getDocumentDatabase();
         break;
-
-      case CHAT:
-        this.chatManager = commitParams.getChatManager();
+      case EDIT_END:
+        OutputStream fileStream = null;
+        try {
+          Section editingSection = documentDatabase.
+                  getDocumentByName(commitParams.getDocName()).
+                  getSectionByIndex(commitParams.getSectionNum());
+          fileStream = editingSection.getWriteStream();
+          InputStream inputStream = RemoteInputStreamClient.wrap(commitParams.getInputStream());
+          fileStream.write(inputStream.read());
+        } catch (IOException e) {
+          serverLogger.log(serverName, e.getMessage());
+        }
+        if(fileStream != null) {
+          try {
+            fileStream.close();
+          } catch (IOException ex) {
+            serverLogger.log(serverName, ex.getMessage());
+          }
+        }
         break;
-
-
     }
   }
 
