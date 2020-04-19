@@ -1,6 +1,13 @@
 package model;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Section implements Serializable {
@@ -41,11 +48,30 @@ public class Section implements Serializable {
     return ocp;
   }
 
-  public void setOccupant(User occupant) {
-    this.occupant = occupant;
-  }
-
   public String getPath() {
     return path;
   }
+
+  /**
+   * get the inputStream to read the section content
+   * @return
+   * @throws IOException
+   */
+  public InputStream getFileInputStream() throws IOException {
+    FileChannel fileChannel = FileChannel.open(Paths.get(path), StandardOpenOption.READ);
+    return Channels.newInputStream(fileChannel);
+  }
+
+  /**
+   * get the outputStream to fill the section with a new content
+   * @return
+   * @throws IOException
+   */
+  public OutputStream getWriteStream() throws IOException {
+    FileChannel fileChannel = FileChannel.open(Paths.get(path), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    return Channels.newOutputStream(fileChannel);
+  }
+
+
+
 }

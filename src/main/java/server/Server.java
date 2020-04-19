@@ -1,33 +1,28 @@
 package server;
 
 import com.healthmarketscience.rmiio.RemoteInputStream;
+import com.healthmarketscience.rmiio.RemoteInputStreamClient;
+import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.SequenceInputStream;
+import org.apache.commons.io.FileUtils;
+
+import java.io.*;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import chat.ChatManager;
-import model.CommitEnum;
-import model.CommitParams;
-import model.Document;
-import model.Request;
-import model.Result;
-import model.Section;
-import model.User;
+import model.*;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int currPort;
@@ -48,6 +43,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     this.currPort = currPort;
     this.serverName = "Server" + currPort;
     this.centralPort = centralPort;
+    createDataDirectory();
     serverLogger = new ServerLogger();
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
@@ -186,7 +182,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.EDIT);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -242,7 +238,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.EDIT_END);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -276,7 +272,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -401,7 +397,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.SHARE);
-    commitParams.setDocNanme(request.getDocName());
+    commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
 
@@ -436,26 +432,93 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   @Override
-  public boolean restart(DocumentDatabase documentDatabase,
-                         AliveUserDatabase aliveUserDatabase,
-                         UserDatabase userDatabase) {
-    this.documentDatabase = documentDatabase;
-    this.aliveUserDatabase = aliveUserDatabase;
-    this.userDatabase = userDatabase;
+  public boolean recoverData(BackupData backupData) {
+    this.documentDatabase = backupData.getDocumentDatabase();
+    this.userDatabase = backupData.getUserDatabase();
+    this.aliveUserDatabase = backupData.getAliveUserDatabase();
+    this.chatManager = backupData.getChatManager();
+
+    // clear previous data
+    try{
+      FileUtils.deleteDirectory(new File(DATA_DIR));
+      createDataDirectory();
+    } catch(IOException e) {
+      serverLogger.log(e.getMessage());
+    }
+    Map<String, RemoteInputStream> fileStreamMap = backupData.getFileStreamMap();
+    for(String path: fileStreamMap.keySet()) {
+      try {
+        InputStream inputStream = getInputStream(fileStreamMap.get(path));
+        if(inputStream == null) return false;
+        FileUtils.copyInputStreamToFile(inputStream, new File(path));
+      } catch (IOException e) {
+        serverLogger.log(serverName, e.getMessage());
+        return false;
+      }
+    }
     return true;
   }
 
   @Override
-  public boolean helpRestartServer(int deadServerPort) {
+  public boolean helpRecoverData(int targetPort) {
+    //TODO documentDatabase and userDatabase
+    // send object or dat file?
+    // It seems that dat files are only saved when a server is shutting down
+
+    DocumentDatabase documentDatabase = this.documentDatabase;
+    UserDatabase userDatabase = this.userDatabase;
+    AliveUserDatabase aliveUserDatabase = this.aliveUserDatabase;
+    ChatManager chatManager = this.chatManager;
+    Map<String, RemoteInputStream> fileStreamMap = new HashMap<>();
+
+//    // user file
+//    // DATA_DIR + "DocDB.dat"
+//    String targetDataDir = "./server_data" + targetPort + "/";
+//    // put userDatabase dat file
+//    fileStreamMap.put(targetDataDir + "UserDB.dat", getRemoteInputStream(DATA_DIR + "UserDB.dat"));
+//    // put DocumentDatabase dat file
+//    fileStreamMap.put(targetDataDir + "DocDB.dat", getRemoteInputStream(DATA_DIR + "DocDB.dat"));
+
+    // put section files
+    for(Document doc: documentDatabase.getDocuments()) {
+      for(Section section: doc.getSections()) {
+        String currPath = section.getPath();
+        String pattern = "(.*data)([0-9]+)(/.*)";
+        // replace port in the path
+        String targetPath  = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
+        fileStreamMap.put(targetPath, getRemoteInputStream(currPath));
+      }
+    }
+    BackupData backupData = new BackupData(documentDatabase, userDatabase, aliveUserDatabase, chatManager, fileStreamMap);
+
     try {
-      Registry registry = LocateRegistry.getRegistry(deadServerPort);
-      ServerInterface stub = (ServerInterface) registry.lookup("Server" + deadServerPort);
-      stub.restart(this.documentDatabase, this.aliveUserDatabase, this.userDatabase);
+      Registry registry = LocateRegistry.getRegistry(targetPort);
+      ServerInterface stub = (ServerInterface) registry.lookup("Server" + targetPort);
+      stub.recoverData(backupData);
       return true;
     } catch (Exception e) {
       serverLogger.log("Failed Restart Server! Exception: " + e.getMessage());
     }
     return false;
+  }
+
+  private RemoteInputStream getRemoteInputStream(String filePath) {
+    try (FileChannel fileChannel = FileChannel.open(Paths.get(filePath), StandardOpenOption.READ);
+         InputStream stream = Channels.newInputStream(fileChannel)) {
+      return new SimpleRemoteInputStream(stream);
+    } catch (Exception e) {
+      serverLogger.log("Exception: " + e.getMessage());
+    }
+    return null;
+  }
+
+  private InputStream getInputStream(RemoteInputStream remoteInputStream) {
+    try {
+      RemoteInputStreamClient.wrap(remoteInputStream);
+    } catch (IOException e) {
+      serverLogger.log(e.getMessage());
+    }
+    return null;
   }
 
   private UserDatabase initUserDB() {
@@ -485,7 +548,14 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
   }
 
+  private void createDataDirectory() {
+    File dataDir = new File(DATA_DIR);
+    if(!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
+  }
+
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
+    // update database stored in commitParams
+    commitParams = updateCommitParamsDatabase(commitParams);
     if(!prepare(transactionID, commitParams)) {
       commitOrAbort(transactionID, false);
       return new Result(0, "Request Aborted.");
@@ -493,6 +563,46 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       commitOrAbort(transactionID, true);
       return new Result(1, "Request Committed.");
     }
+  }
+
+  CommitParams updateCommitParamsDatabase(CommitParams commitParams) {
+    switch (commitParams.getCommitEnum()) {
+      // create user: add new user to userDatabase
+      case CREATE_USER:
+        commitParams.getUserDatabase().addNewUser(commitParams.getUser().getUsername(), commitParams.getUser().getPassword());
+        break;
+      // login: create new OnlineUserRecord (generate token) and put into aliveUserDatabase
+      case LOGIN:
+        commitParams.getAliveUserDatabase().login(commitParams.getUser());
+        break;
+      // logout: set token to null
+      case LOGOUT:
+        String username = commitParams.getUser().getUsername();
+        commitParams.getAliveUserDatabase().getOnlineUserRecord(username).setToken(null);
+        break;
+      // edit: set occupant of the section in documentDatabase
+      case EDIT:
+        String docName = commitParams.getDocName();
+        int sectionNum = commitParams.getSectionNum();
+        commitParams.getDocumentDatabase().getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(commitParams.getUser());
+        break;
+      // edit end: write input stream into section path
+      // no need to update database
+      case EDIT_END:
+        break;
+      // create document: create a new document in documentDatabase
+      case CREATE_DOCUMENT:
+        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
+                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
+        break;
+      // share doc: add user to authors of a document in documentDatabase
+      case SHARE:
+        commitParams.getDocumentDatabase().
+                getDocumentByName(commitParams.getDocName()).addAuthor(commitParams.getUser());
+        break;
+    }
+    return commitParams;
   }
 
   @Override
@@ -688,36 +798,38 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public void executeCommit(CommitParams commitParams) {
-    //TODO
     switch (commitParams.getCommitEnum()) {
-      case PUT:
-
+      case CREATE_USER:
+        this.userDatabase = commitParams.getUserDatabase();
         break;
-
-      case DELETE:
-        break;
-
-      case UPDATE_OCCUPANT:
-        break;
-
-      case UPDATE_AUTHOR:
-        break;
-
-      case UPDATE_SECTION:
-        break;
-
-      case SHARE:
-        // share doc, update local Document database
-        DocumentDatabase documentDatabase = commitParams.getDocumentDatabase();
-        this.documentDatabase = documentDatabase;
-        break;
-
-      case CHAT:
-        this.chatManager = commitParams.getChatManager();
-        break;
-
       case LOGIN:
+      case LOGOUT:
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
+        break;
+      case EDIT:
+      case CREATE_DOCUMENT:
+      case SHARE:
+        this.documentDatabase = commitParams.getDocumentDatabase();
+        break;
+      case EDIT_END:
+        OutputStream fileStream = null;
+        try {
+          Section editingSection = documentDatabase.
+                  getDocumentByName(commitParams.getDocName()).
+                  getSectionByIndex(commitParams.getSectionNum());
+          fileStream = editingSection.getWriteStream();
+          InputStream inputStream = RemoteInputStreamClient.wrap(commitParams.getInputStream());
+          fileStream.write(inputStream.read());
+        } catch (IOException e) {
+          serverLogger.log(serverName, e.getMessage());
+        }
+        if(fileStream != null) {
+          try {
+            fileStream.close();
+          } catch (IOException ex) {
+            serverLogger.log(serverName, ex.getMessage());
+          }
+        }
         break;
     }
   }

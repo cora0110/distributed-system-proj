@@ -17,6 +17,8 @@ public class AliveUserDatabase {
     mutex = new ReentrantReadWriteLock();
   }
 
+
+
   /**
    * Logs a {@code User} instance into the {@code AliveUsersDB} letting it pass to the online
    * state.
@@ -73,6 +75,9 @@ public class AliveUserDatabase {
     return aliveUsers.containsKey(username);
   }
 
+  OnlineUserRecord getOnlineUserRecord(String username) {
+    return aliveUsers.get(username);
+  }
 
   /**
    * The {@code OnlineUserRecord} class represents a {@code OnlineUsersDB} single record and is used
@@ -115,6 +120,10 @@ public class AliveUserDatabase {
      */
     String getToken() {
       return token;
+    }
+
+    public void setToken(String token) {
+      this.token = token;
     }
 
     /**
