@@ -2,21 +2,22 @@ package client;
 
 import lombok.Getter;
 import lombok.Setter;
+import model.User;
 
 @Getter
 @Setter
 public class LocalSession {
   private final String sessionToken;
-  private final String username;
+  private User user;
   private String occupiedFilename;
   private boolean isEditing;
 
   /**
    * Initializes with token and username.
    */
-  LocalSession(String sessionToken, String username) {
+  LocalSession(String sessionToken, User user) {
     this.sessionToken = sessionToken;
-    this.username = username;
+    this.user = user;
     occupiedFilename = null;
   }
 

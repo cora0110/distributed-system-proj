@@ -29,7 +29,9 @@ import model.Message;
 import model.Request;
 import model.Result;
 import model.User;
+import server.CentralServer;
 import server.CentralServerInterface;
+import server.Server;
 import server.ServerInterface;
 
 public class Client {
@@ -51,7 +53,6 @@ public class Client {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    notiClientRunnable = new NotiClientRunnable(serverInterface);
   }
 
   /**
@@ -108,10 +109,12 @@ public class Client {
    */
   private void connect() throws Exception {
     Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-    CentralServerInterface centralServer = (CentralServerInterface) centralRegistry.lookup("CentralServer" + CENTRAL_SERVER_RMI_PORT);
+    CentralServerInterface centralServer = (CentralServerInterface) centralRegistry.lookup(CentralServer.class.getSimpleName() + CENTRAL_SERVER_RMI_PORT);
     int port = centralServer.assignAliveServerToClient();
     Registry registry = LocateRegistry.getRegistry(port);
-    serverInterface = (ServerInterface) registry.lookup("Server" + port);
+    serverInterface = (ServerInterface) registry.lookup(Server.class.getSimpleName() + port);
+    System.out.println("Assigned to " + port);
+    notiClientRunnable = new NotiClientRunnable(serverInterface);
     messageSender = new Sender();
     Thread thread = new Thread(messageReceiver);
     thread.start();
@@ -318,11 +321,15 @@ public class Client {
   private void login(String username, String password) throws Exception {
     if (session == null) {
       Result result = serverInterface.login(new User(username, password));
+      if (result.getStatus() == 0) {
+        System.err.println(result.getMessage());
+        return;
+      }
       String token = result.getMessage();
       user = new User(username);
       notiClientRunnable.setUser(user);
       new Thread(notiClientRunnable).start();
-      session = new LocalSession(token, username);
+      session = new LocalSession(token, user);
       System.out.println("Logged in successfully as " + username);
     } else {
       System.err.println("You're already logged in.");
@@ -339,7 +346,7 @@ public class Client {
         notiClientRunnable.clearNotificationList();
         notiClientRunnable.setUser(null);
         notiClientRunnable.stop();
-        serverInterface.logout(new User(session.getUsername()));
+        serverInterface.logout(new User(session.getUser().getUsername()));
       } else System.err.println("You should 'stopedit' before logging out");
     } else System.err.println("You're not logged in");
   }
@@ -352,8 +359,9 @@ public class Client {
    */
   private void create(String docName, int secNumber) throws Exception {
     if (session != null) {
-      User user = new User(session.getUsername());
+      User user = new User(session.getUser().getUsername());
       Request request = new Request();
+      request.setToken(session.getSessionToken());
       request.setDocName(docName);
       request.setSectionNum(secNumber);
       serverInterface.createDocument(user, request);
@@ -378,7 +386,7 @@ public class Client {
         Request request = new Request();
         request.setDocName(docName);
         request.setSectionNum(secNumber);
-        Result result = serverInterface.edit(new User(session.getUsername()), request);
+        Result result = serverInterface.edit(new User(session.getUser().getUsername()), request);
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         fileStream.write(inputStream.read());
 
@@ -411,7 +419,7 @@ public class Client {
           request.setDocName(path[0]);
           request.setSectionNum(Integer.parseInt(path[1]));
           request.setRemoteInputStream(remoteFileData);
-          serverInterface.editEnd(new User(session.getUsername()), request);
+          serverInterface.editEnd(new User(session.getUser().getUsername()), request);
           messageReceiver.setNewGroup(0L);
         } catch (Exception ex) {
           printException(ex);
@@ -440,7 +448,7 @@ public class Client {
         request.setDocName(docName);
         request.setSectionNum(secNumber);
         request.setToken(session.getSessionToken());
-        Result result = serverInterface.showSection(new User(session.getUsername()), request);
+        Result result = serverInterface.showSection(new User(session.getUser().getUsername()), request);
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         String editor = result.getMessage();
         fileStream.write(inputStream.read());
@@ -460,7 +468,7 @@ public class Client {
     if (session != null) {
       Request request = new Request();
       request.setToken(session.getSessionToken());
-      Result result = serverInterface.listOwnedDocs(new User(session.getUsername()), request);
+      Result result = serverInterface.listOwnedDocs(new User(session.getUser().getUsername()), request);
       System.out.println(result.getMessage());
     } else System.err.println("You're not logged in");
   }
@@ -476,7 +484,7 @@ public class Client {
   private void share(String user, String docName) throws Exception {
     Request request = new Request();
     request.setToken(session.getSessionToken());
-    serverInterface.shareDoc(new User(session.getUsername()), request);
+    serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
   }
 
   /**
@@ -495,7 +503,7 @@ public class Client {
         Request request = new Request();
         request.setDocName(docName);
         request.setToken(session.getSessionToken());
-        Result result = serverInterface.showDocumentContent(new User(session.getUsername()), request);
+        Result result = serverInterface.showDocumentContent(new User(session.getUser().getUsername()), request);
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         String message = result.getMessage();
         fileStream.write(inputStream.read());
@@ -546,7 +554,7 @@ public class Client {
         InetAddress multicastAddress;
         if ((multicastAddress = messageReceiver.getAddress()) != null) {
           try {
-            Message message = new Message(session.getUsername(), text, System.currentTimeMillis());
+            Message message = new Message(session.getUser().getUsername(), text, System.currentTimeMillis());
             InetSocketAddress groupAddress = new InetSocketAddress(multicastAddress, UDP_PORT);
             messageSender.sendMessage(message, groupAddress);
           } catch (Exception ex) {

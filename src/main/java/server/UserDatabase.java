@@ -1,12 +1,13 @@
 package server;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import model.User;
 
-public class UserDatabase {
+public class UserDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
   private List<User> users;
   private ReentrantReadWriteLock mutex;
@@ -84,4 +85,6 @@ public class UserDatabase {
     mutex.readLock().unlock();
     return null;
   }
+
+
 }

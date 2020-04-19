@@ -1,11 +1,12 @@
 package server;
 
+import java.io.Serializable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import model.User;
 
-public class AliveUserDatabase {
+public class AliveUserDatabase implements Serializable {
   ConcurrentHashMap<String, OnlineUserRecord> aliveUsers;
   private ReentrantReadWriteLock mutex;
 
@@ -16,7 +17,6 @@ public class AliveUserDatabase {
     aliveUsers = new ConcurrentHashMap<>();
     mutex = new ReentrantReadWriteLock();
   }
-
 
 
   /**
@@ -42,11 +42,12 @@ public class AliveUserDatabase {
 
   /**
    * When logout, remove the user from the aliveUserDatabase.
+   *
    * @param user
    * @return
    */
-  boolean logout(User user){
-    if (user==null) return false;
+  boolean logout(User user) {
+    if (user == null) return false;
     if (!isLoggedIn(user.getUsername())) return false;
 
     mutex.writeLock().lock();
@@ -86,7 +87,7 @@ public class AliveUserDatabase {
    * @author Federico Gerardi
    * @author https://azraelsec.github.io/
    */
-  public class OnlineUserRecord {
+  public class OnlineUserRecord implements Serializable {
     private User user;
     private String token;
 

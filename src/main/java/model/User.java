@@ -18,12 +18,18 @@ public class User implements Serializable {
   private List<String> notifications;
 
   public User(String username, String password) {
-    this.username = username;
-    this.password = password;
+    try {
+      this.username = username;
+      this.password = getEncrypted(password);
+      notifications = new ArrayList<>();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public User(String username) {
     this.username = username;
+    notifications = new ArrayList<>();
   }
 
   /**
@@ -67,10 +73,14 @@ public class User implements Serializable {
    * @return notifications strings array
    */
   public List<String> getUnreadNotifications() {
-    synchronized (notifications) {
-      List<String> unreadNotifications = new ArrayList<>(notifications);
-      this.notifications.clear();
-      return unreadNotifications;
+    if (null != notifications) {
+      synchronized (notifications) {
+        List<String> unreadNotifications = new ArrayList<>(notifications);
+        this.notifications.clear();
+        return unreadNotifications;
+      }
+    } else {
+      return new ArrayList<>();
     }
   }
 
@@ -79,7 +89,10 @@ public class User implements Serializable {
    *
    * @param doc new document which user has access to
    */
-  void pushNewNotification(String doc) {
+  public void pushNewNotification(String doc) {
+    if (notifications == null) {
+      notifications = new ArrayList<>();
+    }
     synchronized (notifications) {
       notifications.add(doc);
     }

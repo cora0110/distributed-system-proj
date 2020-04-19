@@ -1,17 +1,18 @@
 package server;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import model.Document;
-import model.User;
 import lombok.Getter;
 import lombok.Setter;
+import model.Document;
+import model.User;
 
 @Getter
 @Setter
-public class DocumentDatabase {
+public class DocumentDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
   private List<Document> documents;
 

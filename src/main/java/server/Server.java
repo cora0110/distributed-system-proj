@@ -2,12 +2,19 @@ package server;
 
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
-import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
 import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.SequenceInputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -17,16 +24,29 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import chat.ChatManager;
-import model.*;
+import model.BackupData;
+import model.CommitEnum;
+import model.CommitParams;
+import model.Document;
+import model.Request;
+import model.Result;
+import model.Section;
+import model.User;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int currPort;
   private final String DATA_DIR = "./server_data" + currPort + "/";
+  private final String USER_DB_NAME = "UserDB.dat";
+  private final String DOC_DB_NAME = "DocDB.dat";
   public String serverName;
   private int centralPort;
   private ServerLogger serverLogger;
@@ -41,7 +61,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   public Server(int currPort, int centralPort) throws RemoteException {
     this.currPort = currPort;
-    this.serverName = "Server" + currPort;
+    this.serverName = Server.class.getSimpleName() + currPort;
     this.centralPort = centralPort;
     createDataDirectory();
     serverLogger = new ServerLogger();
@@ -55,6 +75,39 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitResponseMap = new ConcurrentHashMap<>();
 
     bindRMI();
+
+    // store memory database when shutting down with shutdown hook
+    userDatabase = initUserDB();
+    documentDatabase = initDocumentDB();
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      System.out.println("Server is shutting down...");
+      storeUsersDB();
+      storeDocumentsDB();
+    }));
+  }
+
+  /**
+   * Stores UserDB object through serialization.
+   */
+  private boolean storeUsersDB() {
+    try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(DATA_DIR + USER_DB_NAME))) {
+      output.writeObject(userDatabase);
+      return true;
+    } catch (IOException ex) {
+      return false;
+    }
+  }
+
+  /**
+   * Stores DocumentsDatabase object through serialization.
+   */
+  private boolean storeDocumentsDB() {
+    try (ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream(DATA_DIR + DOC_DB_NAME))) {
+      output.writeObject(documentDatabase);
+      return true;
+    } catch (IOException ex) {
+      return false;
+    }
   }
 
   /**
@@ -79,10 +132,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       commitParams.setUser(user);
       commitParams.setCommitEnum(CommitEnum.CREATE_USER);
       commitParams.setSectionNum(-1);
+      // TODO: 4/19/20
+//      UserDatabase cloneUserDB = SerializationUtils.clone(userDatabase);
       commitParams.setUserDatabase(userDatabase);
-
-//      CommitParams commitParams =
-//              new CommitParams(user, 1, null, null, -1, 0);
 
       Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
       if (result.getStatus() == 1) return new Result(1, "Create user succeed");
@@ -107,9 +159,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         commitParams.setSectionNum(-1);
         commitParams.setAliveUserDatabase(aliveUserDatabase);
 
-//        CommitParams commitParams =
-//                new CommitParams(user, 1, null, null, -1, 1);
-
         // TODO: 2PC AND RETURN TOKEN
         Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
         if (result.getStatus() == 0) {
@@ -124,7 +173,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
           return new Result(0, "Token generation failure while logging in.");
         }
       } else {
-        return new Result(0, "Username and password do not match.");
+        return new Result(0, "Unregistered or password do not match.");
       }
     }
   }
@@ -136,9 +185,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.LOGOUT);
     commitParams.setSectionNum(-1);
+    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setAliveUserDatabase(aliveUserDatabase);
-//    CommitParams commitParams =
-//            new CommitParams(user, 0, null, null, -1, 1);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 1) {
@@ -184,11 +232,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.EDIT);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
+    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setDocumentDatabase(documentDatabase);
-
-    // set occupant to that section
-//    CommitParams commitParams = new CommitParams(user, 3, null,
-//            request.getDocName(), request.getSectionNum(), 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 0) {
@@ -240,10 +285,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.EDIT_END);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
+    commitParams.setInputStream(request.getRemoteInputStream());
+    // TODO: 4/19/20 should be an updated temporary param, process stream.
     commitParams.setDocumentDatabase(documentDatabase);
-
-//    CommitParams commitParams = new CommitParams(user, 5,
-//            request.getRemoteInputStream(), request.getDocName(), request.getSectionNum(), 2);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
@@ -260,7 +304,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Not logged in.");
     }
 
-    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+    if (!user.getUsername().equals(aliveUserDatabase.getUserByToken(request.getToken()).getUsername())) {
       return new Result(0, "User does not match token.");
     }
 
@@ -274,10 +318,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
+    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setDocumentDatabase(documentDatabase);
 
-//    CommitParams commitParams = new CommitParams(user, 1, null,
-//            request.getDocName(), request.getSectionNum(), 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
       return new Result(1, "Succeed");
@@ -387,23 +430,22 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "You do not have access.");
     }
 
-    document.addAuthor(request.getTargetUser());
-    //TODO push notification test
-    User sharedUser = userDatabase.getUserByUsername(request.getTargetUser().getUsername());
-    sharedUser.getUnreadNotifications().add("User " +
-            request.getTargetUser().getUsername() + " can now access the document " + document.getName());
-
-    // TODO: 4/17/20 assign share access to other servers
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.SHARE);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
+    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setDocumentDatabase(documentDatabase);
 
-//    CommitParams commitParams = new CommitParams(request.getTargetUser(), 4,
-//            null, request.getDocName(), -1, 2);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+
+    //TODO push notification test
+    document.addAuthor(request.getTargetUser());
+    User sharedUser = userDatabase.getUserByUsername(request.getTargetUser().getUsername());
+    sharedUser.pushNewNotification("User " +
+            request.getTargetUser().getUsername() + " can now access the document " + document.getName());
+
     if (result.getStatus() == 1) {
       return new Result(1, "Succeed");
     } else {
@@ -414,7 +456,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   @Override
   public Result getNotifications(User user) throws RemoteException {
     User userDB = userDatabase.getUserByUsername(user.getUsername());
-    List<String> unreadNotifications = userDB.getUnreadNotifications();
+    List<String> unreadNotifications = null;
+    if (userDB != null) {
+      unreadNotifications = userDB.getUnreadNotifications();
+    }
     Result result = new Result();
     result.setUnreadNotifications(unreadNotifications);
     return result;
@@ -439,17 +484,17 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     this.chatManager = backupData.getChatManager();
 
     // clear previous data
-    try{
+    try {
       FileUtils.deleteDirectory(new File(DATA_DIR));
       createDataDirectory();
-    } catch(IOException e) {
+    } catch (IOException e) {
       serverLogger.log(e.getMessage());
     }
     Map<String, RemoteInputStream> fileStreamMap = backupData.getFileStreamMap();
-    for(String path: fileStreamMap.keySet()) {
+    for (String path : fileStreamMap.keySet()) {
       try {
         InputStream inputStream = getInputStream(fileStreamMap.get(path));
-        if(inputStream == null) return false;
+        if (inputStream == null) return false;
         FileUtils.copyInputStreamToFile(inputStream, new File(path));
       } catch (IOException e) {
         serverLogger.log(serverName, e.getMessage());
@@ -480,12 +525,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 //    fileStreamMap.put(targetDataDir + "DocDB.dat", getRemoteInputStream(DATA_DIR + "DocDB.dat"));
 
     // put section files
-    for(Document doc: documentDatabase.getDocuments()) {
-      for(Section section: doc.getSections()) {
+    for (Document doc : documentDatabase.getDocuments()) {
+      for (Section section : doc.getSections()) {
         String currPath = section.getPath();
         String pattern = "(.*data)([0-9]+)(/.*)";
         // replace port in the path
-        String targetPath  = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
+        String targetPath = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
         fileStreamMap.put(targetPath, getRemoteInputStream(currPath));
       }
     }
@@ -493,7 +538,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     try {
       Registry registry = LocateRegistry.getRegistry(targetPort);
-      ServerInterface stub = (ServerInterface) registry.lookup("Server" + targetPort);
+      ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + targetPort);
       stub.recoverData(backupData);
       return true;
     } catch (Exception e) {
@@ -527,7 +572,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   }
 
   private UserDatabase loadUserDB() {
-    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "UserDB.dat"))) {
+    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + USER_DB_NAME))) {
       return (UserDatabase) input.readObject();
     } catch (IOException | ClassNotFoundException e) {
       return null;
@@ -541,7 +586,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
 
   private DocumentDatabase loadDocumentDB() {
-    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + "DocDB.dat"))) {
+    try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + DOC_DB_NAME))) {
       return (DocumentDatabase) input.readObject();
     } catch (IOException | ClassNotFoundException e) {
       return null;
@@ -550,13 +595,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   private void createDataDirectory() {
     File dataDir = new File(DATA_DIR);
-    if(!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
+    if (!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
   }
 
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
     // update database stored in commitParams
     commitParams = updateCommitParamsDatabase(commitParams);
-    if(!prepare(transactionID, commitParams)) {
+    if (!prepare(transactionID, commitParams)) {
       commitOrAbort(transactionID, false);
       return new Result(0, "Request Aborted.");
     } else {
@@ -607,7 +652,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public boolean prepare(UUID transactionID, CommitParams commitParams) {
-    if(getServerStatus(currPort) != 0) return false;
+    if (getServerStatus(currPort) != 0) return false;
     // change current server status: Empty -> Busy
     setServerStatus(currPort, 1);
     // add the <transactionID, CommitParams> to tempStorage
@@ -619,13 +664,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     // put transactionID into prepareResponseMap
     prepareResponseMap.put(transactionID, new ConcurrentHashMap<>());
     serverLogger.log(serverName, "Prepare: sent");
-    for(int peerPort: peers) {
+    for (int peerPort : peers) {
       try {
         Registry registry = LocateRegistry.getRegistry(peerPort);
-        ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+        ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + peerPort);
         boolean prepareAck = stub.receivePrepare(transactionID, commitParams);
         prepareResponseMap.get(transactionID).put(peerPort, prepareAck);
-      } catch(Exception e) {
+      } catch (Exception e) {
         serverLogger.log(serverName, "Exception: " + e.getMessage());
       }
     }
@@ -634,8 +679,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     int agreeAckCount = 0;
     // retry for three times
     int retry = 3;
-    while(retry > 0) {
-      if(retry < 3) {
+    while (retry > 0) {
+      if (retry < 3) {
         try {
           // pause for 1 secs
           Thread.sleep(1000);
@@ -647,9 +692,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       agreeAckCount = 0;
       retry--;
       Map<Integer, Boolean> ackMap = prepareResponseMap.get(transactionID);
-      for(int peerPort: peers) {
-        if(ackMap.get(peerPort) != null) {
-          if(ackMap.get(peerPort)){
+      for (int peerPort : peers) {
+        if (ackMap.get(peerPort) != null) {
+          if (ackMap.get(peerPort)) {
             ackCount++;
             agreeAckCount++;
           } else {
@@ -658,21 +703,21 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         }
       }
 
-      if(ackCount == numOfPeers) {
+      if (ackCount == numOfPeers) {
         return agreeAckCount == numOfPeers;
       }
     }
 
     // change status of dead server
-    for(int peerPort: peers) {
-      if(prepareResponseMap.get(transactionID).get(peerPort) == null) {
+    for (int peerPort : peers) {
+      if (prepareResponseMap.get(transactionID).get(peerPort) == null) {
         setServerStatus(peerPort, 2);
-        sendMessageToCentral("Server" + peerPort + " is down!");
+        sendMessageToCentral(Server.class.getSimpleName() + peerPort + " is down!");
       }
     }
 
     // if 0 abort ack && receive agree acks from more than half peers, commit, otherwise abort
-    if(ackCount == agreeAckCount && ackCount >= (numOfPeers/2 + 1)) {
+    if (ackCount == agreeAckCount && ackCount >= (numOfPeers / 2 + 1)) {
       return true;
     }
     return false;
@@ -681,7 +726,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   @Override
   public boolean receivePrepare(UUID transactionID, CommitParams commitParams) {
     serverLogger.log(serverName, "Prepare: received");
-    if(getServerStatus(currPort) != 0) {
+    if (getServerStatus(currPort) != 0) {
       serverLogger.log(serverName, "Abort: sent");
       return false;
     } else {
@@ -699,29 +744,29 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     int numOfPeers = peers.length;
     commitResponseMap.put(transactionID, new ConcurrentHashMap<>());
 
-    if(ack) {
+    if (ack) {
       serverLogger.log(serverName, "Commit: sent");
-      for(int peerPort: peers) {
+      for (int peerPort : peers) {
         try {
           Registry registry = LocateRegistry.getRegistry(peerPort);
-          ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+          ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + peerPort);
           boolean commitAck = stub.receiveCommit(transactionID);
           commitResponseMap.get(transactionID).put(peerPort, commitAck);
-        } catch(Exception e) {
+        } catch (Exception e) {
           serverLogger.log(serverName, "Exception: " + e.getMessage());
         }
       }
-    }else {
+    } else {
       serverLogger.log(serverName, "Abort: sent");
-      for(int peerPort: peers) {
+      for (int peerPort : peers) {
         Boolean prepareAck = prepareResponseMap.get(transactionID).get(peerPort);
-        if(prepareAck != null && prepareAck) {
+        if (prepareAck != null && prepareAck) {
           try {
             Registry registry = LocateRegistry.getRegistry(peerPort);
-            ServerInterface stub = (ServerInterface) registry.lookup("Server" + currPort);
+            ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + currPort);
             boolean commitAck = stub.receiveAbort(transactionID);
             commitResponseMap.get(transactionID).put(peerPort, commitAck);
-          } catch(Exception e) {
+          } catch (Exception e) {
             serverLogger.log(serverName, "Exception: " + e.getMessage());
           }
         }
@@ -730,8 +775,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     int ackCount;
     int retry = 3;
-    while(retry > 0) {
-      if(retry < 3) {
+    while (retry > 0) {
+      if (retry < 3) {
         try {
           // pause for 2 secs
           Thread.sleep(1000);
@@ -745,25 +790,25 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
       Map<Integer, Boolean> ackMap = commitResponseMap.get(transactionID);
 
-      for(int peerPort: peers) {
-        if(ackMap.get(peerPort) != null) {
+      for (int peerPort : peers) {
+        if (ackMap.get(peerPort) != null) {
           ackCount++;
         }
       }
 
-      if(ackCount == numOfPeers) break;
+      if (ackCount == numOfPeers) break;
     }
 
-    for(int peerPort: peers) {
-      if(commitResponseMap.get(transactionID).get(peerPort) == null) {
+    for (int peerPort : peers) {
+      if (commitResponseMap.get(transactionID).get(peerPort) == null) {
         setServerStatus(peerPort, 2);
-        sendMessageToCentral("Server" + peerPort + " is down!");
+        sendMessageToCentral(Server.class.getSimpleName() + peerPort + " is down!");
       }
     }
 
-    if(ack) {
+    if (ack) {
       CommitParams commitParams = tempStorage.get(transactionID);
-      if(commitParams == null) {
+      if (commitParams == null) {
         throw new IllegalArgumentException("The commitParams need to commit cannot be found.");
       }
       executeCommit(commitParams);
@@ -779,7 +824,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public boolean receiveCommit(UUID transactionID) {
     serverLogger.log(serverName, "Commit: received");
     CommitParams commitParams = tempStorage.get(transactionID);
-    if(commitParams == null) {
+    if (commitParams == null) {
       throw new IllegalArgumentException("The commitParams need to commit cannot be found.");
     }
     executeCommit(commitParams);
@@ -823,7 +868,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         } catch (IOException e) {
           serverLogger.log(serverName, e.getMessage());
         }
-        if(fileStream != null) {
+        if (fileStream != null) {
           try {
             fileStream.close();
           } catch (IOException ex) {
@@ -837,9 +882,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private int getServerStatus(int port) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
-      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup(CentralServer.class.getSimpleName() + centralPort);
       return stub.getServerStatus(port);
-    } catch(Exception e) {
+    } catch (Exception e) {
       serverLogger.log(serverName, "Exception: " + e.getMessage());
       return -1;
     }
@@ -848,9 +893,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private void setServerStatus(int port, int status) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
-      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup(CentralServer.class.getSimpleName() + centralPort);
       stub.setServerStatus(port, status);
-    } catch(Exception e) {
+    } catch (Exception e) {
       serverLogger.log(serverName, "Exception: " + e.getMessage());
     }
   }
@@ -858,9 +903,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private int[] getPeers(int currPort) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
-      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup(CentralServer.class.getSimpleName() + centralPort);
       return stub.getPeers(currPort);
-    } catch(Exception e) {
+    } catch (Exception e) {
       serverLogger.log(serverName, "Exception: " + e.getMessage());
       return null;
     }
@@ -869,9 +914,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   private void sendMessageToCentral(String message) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
-      CentralServerInterface stub = (CentralServerInterface) registry.lookup("CentralServer" + currPort);
+      CentralServerInterface stub = (CentralServerInterface) registry.lookup(CentralServer.class.getSimpleName() + centralPort);
       stub.receiveNotification(message);
-    } catch(Exception e) {
+    } catch (Exception e) {
       serverLogger.log(serverName, "Exception: " + e.getMessage());
     }
   }

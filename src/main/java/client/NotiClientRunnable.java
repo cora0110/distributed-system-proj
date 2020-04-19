@@ -28,7 +28,10 @@ public class NotiClientRunnable implements Runnable {
       try {
         Result result = serverInterface.getNotifications(user);
         List<String> unreadNotifications = result.getUnreadNotifications();
-        notifications = unreadNotifications;
+        if (null != unreadNotifications) {
+          notifications = unreadNotifications;
+          user.setNotifications(unreadNotifications);
+        }
         Thread.sleep(3000);
       } catch (Exception e) {
         e.printStackTrace();
