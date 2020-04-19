@@ -39,7 +39,8 @@ public class Client {
   public static int UDP_PORT = 1338;
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
   private static int CENTRAL_SERVER_RMI_PORT = 12345;
-  private static String DATA_DIR = "./client_data/";
+  private static String DATA_DIR;
+  private String clientName;
   private ServerInterface serverInterface;
   private Sender messageSender;
   private Receiver messageReceiver;
@@ -47,9 +48,12 @@ public class Client {
   private LocalSession session;
   private User user;
 
-  public Client() {
+  public Client(String clientName) {
     try {
+      this.clientName = clientName;
+      DATA_DIR = "./client_data_" + clientName + "/";
       messageReceiver = new Receiver();
+      checkDataDirectory();
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -81,8 +85,13 @@ public class Client {
    * @param args command arguments
    */
   public static void main(String[] args) {
-    checkDataDirectory();
-    Client client = new Client();
+    if(args.length != 1) {
+      System.out.println("Please specify a client name!");
+      return;
+    }
+
+    String clientName = args[0];
+    Client client = new Client(clientName);
     try {
       client.connect();
       client.commandDispatchingLoop();
