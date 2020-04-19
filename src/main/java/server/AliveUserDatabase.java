@@ -1,10 +1,10 @@
 package server;
 
+import model.User;
+
 import java.io.Serializable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import model.User;
 
 public class AliveUserDatabase implements Serializable {
   ConcurrentHashMap<String, OnlineUserRecord> aliveUsers;

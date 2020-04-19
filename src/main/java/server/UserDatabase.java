@@ -1,11 +1,11 @@
 package server;
 
+import model.User;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import model.User;
 
 public class UserDatabase implements Serializable {
   private static final long serialVersionUID = 1L;

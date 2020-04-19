@@ -6,11 +6,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
 public class Document implements Serializable {
   private static final long serialVersionUID = -5250135537941945156L;
 
@@ -75,4 +70,35 @@ public class Document implements Serializable {
   }
 
 
+  public String getName() {
+    return this.name;
+  }
+
+  public User getCreator() {
+    return this.creator;
+  }
+
+  public List<User> getAuthors() {
+    return this.authors;
+  }
+
+  public List<Section> getSections() {
+    return this.sections;
+  }
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void setCreator(User creator) {
+    this.creator = creator;
+  }
+
+  public void setAuthors(List<User> authors) {
+    this.authors = authors;
+  }
+
+  public void setSections(List<Section> sections) {
+    this.sections = sections;
+  }
 }

@@ -1,10 +1,10 @@
 package chat;
 
+import model.Document;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
-
-import model.Document;
 
 public class ChatManager {
 

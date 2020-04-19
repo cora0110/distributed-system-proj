@@ -1,20 +1,13 @@
 package server;
 
+import chat.ChatManager;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
-
+import model.*;
 import org.apache.commons.io.FileUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.io.SequenceInputStream;
+import java.io.*;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -24,27 +17,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Vector;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import chat.ChatManager;
-import model.BackupData;
-import model.CommitEnum;
-import model.CommitParams;
-import model.Document;
-import model.Request;
-import model.Result;
-import model.Section;
-import model.User;
-
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int currPort;
-  private final String DATA_DIR = "./server_data" + currPort + "/";
+  private final String DATA_DIR;
   private final String USER_DB_NAME = "UserDB.dat";
   private final String DOC_DB_NAME = "DocDB.dat";
   public String serverName;
@@ -63,6 +42,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     this.currPort = currPort;
     this.serverName = Server.class.getSimpleName() + currPort;
     this.centralPort = centralPort;
+    DATA_DIR = "./server_data_" + currPort + "/";
     createDataDirectory();
     serverLogger = new ServerLogger();
     userDatabase = initUserDB();
@@ -137,7 +117,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       commitParams.setUserDatabase(userDatabase);
 
       Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-      if (result.getStatus() == 1) return new Result(1, "Create user succeed");
+      if (result.getStatus() == 1) {
+        serverLogger.log(serverName, CommitEnum.CREATE_USER + ": SUCCESS");
+        return new Result(1, "Create user succeed");
+      }
       else return new Result(0, "Request aborted.");
     } else {
       return new Result(0, "Username already exists");
@@ -167,7 +150,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         String token = aliveUserDatabase.getTokenByUser(user.getUsername());
 
         if (token != null) {
-          System.out.println("New user logged in: " + user.getUsername());
+          serverLogger.log(serverName, CommitEnum.LOGIN + ": SUCCESS");
+          serverLogger.log("New user logged in: " + user.getUsername());
           return new Result(1, token);
         } else {
           return new Result(0, "Token generation failure while logging in.");
@@ -506,23 +490,19 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public boolean helpRecoverData(int targetPort) {
-    //TODO documentDatabase and userDatabase
-    // send object or dat file?
-    // It seems that dat files are only saved when a server is shutting down
-
     DocumentDatabase documentDatabase = this.documentDatabase;
     UserDatabase userDatabase = this.userDatabase;
     AliveUserDatabase aliveUserDatabase = this.aliveUserDatabase;
     ChatManager chatManager = this.chatManager;
     Map<String, RemoteInputStream> fileStreamMap = new HashMap<>();
 
-//    // user file
-//    // DATA_DIR + "DocDB.dat"
-//    String targetDataDir = "./server_data" + targetPort + "/";
-//    // put userDatabase dat file
-//    fileStreamMap.put(targetDataDir + "UserDB.dat", getRemoteInputStream(DATA_DIR + "UserDB.dat"));
-//    // put DocumentDatabase dat file
-//    fileStreamMap.put(targetDataDir + "DocDB.dat", getRemoteInputStream(DATA_DIR + "DocDB.dat"));
+    // user file
+    // DATA_DIR + "DocDB.dat"
+    String targetDataDir = "./server_data" + targetPort + "/";
+    // put userDatabase dat file
+    fileStreamMap.put(targetDataDir + "UserDB.dat", getRemoteInputStream(DATA_DIR + "UserDB.dat"));
+    // put DocumentDatabase dat file
+    fileStreamMap.put(targetDataDir + "DocDB.dat", getRemoteInputStream(DATA_DIR + "DocDB.dat"));
 
     // put section files
     for (Document doc : documentDatabase.getDocuments()) {

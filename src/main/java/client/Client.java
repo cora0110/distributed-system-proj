@@ -1,15 +1,20 @@
 package client;
 
+import chat.Receiver;
+import chat.Sender;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
+import model.Message;
+import model.Request;
+import model.Result;
+import model.User;
+import server.CentralServer;
+import server.CentralServerInterface;
+import server.Server;
+import server.ServerInterface;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
@@ -23,22 +28,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
-import chat.Receiver;
-import chat.Sender;
-import model.Message;
-import model.Request;
-import model.Result;
-import model.User;
-import server.CentralServer;
-import server.CentralServerInterface;
-import server.Server;
-import server.ServerInterface;
-
 public class Client {
 
   public static int UDP_PORT = 1338;
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
-  private static int CENTRAL_SERVER_RMI_PORT = 12345;
+  private static int CENTRAL_SERVER_RMI_PORT = 1200;
   private static String DATA_DIR;
   private String clientName;
   private ServerInterface serverInterface;
@@ -147,7 +141,7 @@ public class Client {
                     "  logout: to logout\n" +
                     "  list: to list all the documents you are able to see and edit\n" +
                     "  share USER DOC: to share a document with another user\n" +
-                    "  news: to get all the news\n\n" +
+                    "  news: to get all the news\n" +
                     "  receive: to retrieve all the unread chat messages\n" +
                     "  send TEXT: to send the TEXT message regarding the document being edited";
     System.out.println(message);

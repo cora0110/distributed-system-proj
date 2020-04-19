@@ -1,17 +1,13 @@
 package server;
 
+import model.Document;
+import model.User;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
-import model.Document;
-import model.User;
-
-@Getter
-@Setter
 public class DocumentDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
   private List<Document> documents;
@@ -82,5 +78,13 @@ public class DocumentDatabase implements Serializable {
           nameList.add(d.getName());
     }
     return nameList.toArray(new String[0]);
+  }
+
+  public List<Document> getDocuments() {
+    return this.documents;
+  }
+
+  public void setDocuments(List<Document> documents) {
+    this.documents = documents;
   }
 }

@@ -3,11 +3,6 @@ package model;
 
 import java.io.Serializable;
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
 public class Message implements Serializable {
   private static final long serialVersionUID = 1812908819029669642L;
 
@@ -33,4 +28,28 @@ public class Message implements Serializable {
     String s = timestamp + ":" + sender + " " + content;
     return s.getBytes();
   }
+
+    public String getSender() {
+        return this.sender;
+    }
+
+    public String getContent() {
+        return this.content;
+    }
+
+    public long getTimestamp() {
+        return this.timestamp;
+    }
+
+    public void setSender(String sender) {
+        this.sender = sender;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
 }

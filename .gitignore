@@ -24,3 +24,7 @@ hs_err_pid*
 
 .idea/
 distributed-system-final-project.iml
+.DS_Store
+*server_data*
+*client_data*
+target/

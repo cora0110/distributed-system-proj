@@ -1,16 +1,12 @@
 package client;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import lombok.Getter;
-import lombok.Setter;
 import model.Result;
 import model.User;
 import server.ServerInterface;
 
-@Getter
-@Setter
+import java.util.ArrayList;
+import java.util.List;
+
 public class NotiClientRunnable implements Runnable {
 
   private List<String> notifications;
@@ -68,4 +64,35 @@ public class NotiClientRunnable implements Runnable {
     }
   }
 
+    public List<String> getNotifications() {
+        return this.notifications;
+    }
+
+    public boolean isAlive() {
+        return this.isAlive;
+    }
+
+    public ServerInterface getServerInterface() {
+        return this.serverInterface;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public void setNotifications(List<String> notifications) {
+        this.notifications = notifications;
+    }
+
+    public void setAlive(boolean isAlive) {
+        this.isAlive = isAlive;
+    }
+
+    public void setServerInterface(ServerInterface serverInterface) {
+        this.serverInterface = serverInterface;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

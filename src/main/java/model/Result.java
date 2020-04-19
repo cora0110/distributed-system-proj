@@ -6,14 +6,7 @@ import com.healthmarketscience.rmiio.RemoteOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 //TODO
-@Getter
-@Setter
-@NoArgsConstructor
 public class Result implements Serializable {
   List<String> unreadNotifications;
   private int status;
@@ -31,4 +24,47 @@ public class Result implements Serializable {
     this.message = message;
     this.remoteInputStream = remoteInputStream;
   }
+
+    public Result() {
+    }
+
+    public List<String> getUnreadNotifications() {
+        return this.unreadNotifications;
+    }
+
+    public int getStatus() {
+        return this.status;
+    }
+
+    public String getMessage() {
+        return this.message;
+    }
+
+    public RemoteInputStream getRemoteInputStream() {
+        return this.remoteInputStream;
+    }
+
+    public RemoteOutputStream getRemoteOutputStream() {
+        return this.remoteOutputStream;
+    }
+
+    public void setUnreadNotifications(List<String> unreadNotifications) {
+        this.unreadNotifications = unreadNotifications;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public void setRemoteInputStream(RemoteInputStream remoteInputStream) {
+        this.remoteInputStream = remoteInputStream;
+    }
+
+    public void setRemoteOutputStream(RemoteOutputStream remoteOutputStream) {
+        this.remoteOutputStream = remoteOutputStream;
+    }
 }

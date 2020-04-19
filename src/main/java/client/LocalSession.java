@@ -1,11 +1,7 @@
 package client;
 
-import lombok.Getter;
-import lombok.Setter;
 import model.User;
 
-@Getter
-@Setter
 public class LocalSession {
   private final String sessionToken;
   private User user;
@@ -24,4 +20,28 @@ public class LocalSession {
   boolean isEditing() {
     return occupiedFilename != null;
   }
+
+    public String getSessionToken() {
+        return this.sessionToken;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public String getOccupiedFilename() {
+        return this.occupiedFilename;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public void setOccupiedFilename(String occupiedFilename) {
+        this.occupiedFilename = occupiedFilename;
+    }
+
+    public void setEditing(boolean isEditing) {
+        this.isEditing = isEditing;
+    }
 }

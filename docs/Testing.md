@@ -2,11 +2,23 @@
 
 
 
+start central:
+
+corresponding server files are created
+
+start client \<clientname>:
+
+corresponding client file is created
+
+
+
 Client Command:
 
 - help: to show this help message
 
 - register USER PWD: to register a new account with username USER and password PWD
+
+  - if restart server, register info is still stored in server .dat file
 
 - login USER PWD: to login using USER and PWD credentials
 

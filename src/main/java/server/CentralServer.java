@@ -24,12 +24,12 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     this.centralName = "CentralServer" + currPort;
     this.serverPorts = serverPorts;
     this.serverStatus = new HashMap();
+    serverLogger = new ServerLogger();
+    bindRMI();
     for (int port : this.serverPorts) {
       new Server(port, centralPort);
       this.serverStatus.put(port, 0);
     }
-    serverLogger = new ServerLogger();
-    bindRMI();
   }
 
   /**
@@ -120,6 +120,6 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   }
 
   public static void main(String[] args) throws Exception {
-    CentralServer centralServer = new CentralServer("127.0.0.1", 12345, new int[]{12341, 12342});
+    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400});
   }
 }

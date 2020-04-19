@@ -1,11 +1,10 @@
 package server;
 
+import model.*;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
-
-import chat.ChatManager;
-import model.*;
 
 public interface ServerInterface extends Remote {
 

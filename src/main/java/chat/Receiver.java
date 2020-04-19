@@ -1,17 +1,13 @@
 package chat;
 
+import model.Message;
+
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
-import model.Message;
-
-@Getter
-@Setter
 public class Receiver implements Runnable {
 
   private List<Message> messages;
@@ -62,4 +58,43 @@ public class Receiver implements Runnable {
     this.isAlive = false;
   }
 
+    public List<Message> getMessages() {
+        return this.messages;
+    }
+
+    public MulticastSocket getSocket() {
+        return this.socket;
+    }
+
+    public byte[] getBuffer() {
+        return this.buffer;
+    }
+
+    public boolean isAlive() {
+        return this.isAlive;
+    }
+
+    public InetAddress getAddress() {
+        return this.address;
+    }
+
+    public void setMessages(List<Message> messages) {
+        this.messages = messages;
+    }
+
+    public void setSocket(MulticastSocket socket) {
+        this.socket = socket;
+    }
+
+    public void setBuffer(byte[] buffer) {
+        this.buffer = buffer;
+    }
+
+    public void setAlive(boolean isAlive) {
+        this.isAlive = isAlive;
+    }
+
+    public void setAddress(InetAddress address) {
+        this.address = address;
+    }
 }
