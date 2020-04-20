@@ -1,17 +1,17 @@
 package chat;
 
-import model.Message;
-
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.net.SocketException;
+
+import model.Message;
 
 public class Sender {
 
   private DatagramSocket socket;
-  private InetSocketAddress group;
   private byte[] buffer;
+
 
   public Sender() {
     try {
@@ -24,11 +24,13 @@ public class Sender {
   /**
    * Send a multicast message to a group.
    */
-  public void sendMessage(Message message, InetSocketAddress group) throws Exception {
-    byte[] buffer = message.getBytes();
-    DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group);
+  public void sendMessage(Message message, InetAddress group) throws Exception {
+    socket = new DatagramSocket();
+    buffer = message.getBytes();
+
+    DatagramPacket packet
+            = new DatagramPacket(buffer, buffer.length, group, 4477);
     socket.send(packet);
-    socket.close();
   }
 
 }
