@@ -31,6 +31,9 @@ Client Command:
 
 - create DOC SEC: to create a new document named DOC and contains SEC sections
 
+  - not login -> You're not logged in
+  - 
+
 - edit DOC SEC:(TMP) to edit the section SEC of DOC document (using TMP temporary filename)
 
 - endedit: to stop the current editing session
