@@ -5,8 +5,9 @@ import model.User;
 public class LocalSession {
   private final String sessionToken;
   private User user;
-  private String occupiedFilename;
-  private boolean isEditing;
+  private String occupiedFilePath;
+  private String occupiedFileName;
+  private int sectionIndex;
 
   /**
    * Initializes with token and username.
@@ -14,34 +15,46 @@ public class LocalSession {
   LocalSession(String sessionToken, User user) {
     this.sessionToken = sessionToken;
     this.user = user;
-    occupiedFilename = null;
+    occupiedFilePath = null;
   }
 
   boolean isEditing() {
-    return occupiedFilename != null;
+    return occupiedFilePath != null;
   }
 
-    public String getSessionToken() {
-        return this.sessionToken;
-    }
+  public String getSessionToken() {
+    return this.sessionToken;
+  }
 
-    public User getUser() {
-        return this.user;
-    }
+  public User getUser() {
+    return this.user;
+  }
 
-    public String getOccupiedFilename() {
-        return this.occupiedFilename;
-    }
+  public String getOccupiedFilePath() {
+    return occupiedFilePath;
+  }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+  public void setOccupiedFilePath(String occupiedFilePath) {
+    this.occupiedFilePath = occupiedFilePath;
+  }
 
-    public void setOccupiedFilename(String occupiedFilename) {
-        this.occupiedFilename = occupiedFilename;
-    }
+  public String getOccupiedFileName() {
+    return occupiedFileName;
+  }
 
-    public void setEditing(boolean isEditing) {
-        this.isEditing = isEditing;
-    }
+  public void setOccupiedFileName(String occupiedFileName) {
+    this.occupiedFileName = occupiedFileName;
+  }
+
+  public void setUser(User user) {
+    this.user = user;
+  }
+
+  public int getSectionIndex() {
+    return sectionIndex;
+  }
+
+  public void setSectionIndex(int sectionIndex) {
+    this.sectionIndex = sectionIndex;
+  }
 }

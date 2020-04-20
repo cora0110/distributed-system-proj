@@ -25,7 +25,7 @@ public class NotiClientRunnable implements Runnable {
         Result result = serverInterface.getNotifications(user);
         List<String> unreadNotifications = result.getUnreadNotifications();
         if (null != unreadNotifications && !unreadNotifications.isEmpty()) {
-          System.out.println("!!!!" + unreadNotifications);
+          System.out.println("You have a new notification.");
           notifications = unreadNotifications;
           user.setNotifications(unreadNotifications);
         }

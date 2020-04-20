@@ -9,10 +9,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatManager {
 
   /**
-   * Full range is from 233.0.0.0 to 233.255.255.254;
+   * Full range is from 239.0.0.1 to 239.255.255.254;
    */
-  private static final long START_ADDR = 3909091329L;
-  private static final long END_ADDR = 3925868542L;
+  private static final long START_ADDR = 4009754625L;
+  private static final long END_ADDR = 4026531838L;
 
   private ConcurrentHashMap<Document, Long> chatDatabase;
 

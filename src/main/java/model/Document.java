@@ -59,12 +59,12 @@ public class Document implements Serializable {
   /**
    * Gets all the sections currently being edited.
    */
-  public List<Section> getOccupiedSections() {
-    List<Section> editing = new ArrayList<>();
+  public List<String> getOccupiedSections() {
+    List<String> editing = new ArrayList<>();
     for (int i = 0; i < sections.size(); i++) {
       Section section = sections.get(i);
       if (section.getOccupant() != null) {
-        editing.add(section);
+        editing.add(String.valueOf(i));
       }
     }
     return editing;

@@ -1,12 +1,12 @@
 package chat;
 
-import model.Message;
-
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
 import java.util.List;
+
+import model.Message;
 
 public class Receiver implements Runnable {
 
@@ -14,35 +14,51 @@ public class Receiver implements Runnable {
   private MulticastSocket socket;
   private byte[] buffer;
   private boolean isAlive;
-  private InetAddress address;
+  private InetAddress group;
 
   public Receiver() throws Exception {
     this.messages = new ArrayList<>();
     this.buffer = new byte[2048];
     this.isAlive = true;
-    this.socket = new MulticastSocket();
+    this.socket = new MulticastSocket(4567);
   }
 
   @Override
   public void run() {
     while (isAlive) {
+      if (group != null) {
+        try {
+//        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address);
+//        socket.receive(packet);
+//        String received = new String(packet.getData(), 0, packet.getLength());
+//        Message message = new Message(received);
+//        messages.add(message);
+
+
+          socket.joinGroup(group);
+          DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+          socket.receive(packet);
+          String received = new String(
+                  packet.getData(), 0, packet.getLength());
+          Message message = new Message(received);
+          messages.add(message);
+        } catch (Exception e) {
+          e.printStackTrace();
+          System.out.println("Unable receiving messages.");
+        }
+      }
       try {
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-        socket.receive(packet);
-        String received = new String(packet.getData(), 0, packet.getLength());
-        Message message = new Message(received);
-        messages.add(message);
-      } catch (Exception e) {
-        System.out.println("Unable receiving messages.");
+        Thread.sleep(3000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
       }
     }
   }
 
   public void setNewGroup(long address) throws Exception {
     if (socket != null) {
-      InetAddress inetAddress = ChatManager.longToAddress(address);
-      this.address = inetAddress;
-      this.socket.joinGroup(inetAddress);
+      group = ChatManager.longToAddress(address);
+      this.socket.joinGroup(group);
     }
   }
 
@@ -53,48 +69,49 @@ public class Receiver implements Runnable {
   }
 
   public void leave() throws Exception {
-    this.socket.leaveGroup(address);
-    this.socket.close();
+    this.socket.leaveGroup(group);
     this.isAlive = false;
   }
 
-    public List<Message> getMessages() {
-        return this.messages;
-    }
+  public List<Message> getMessages() {
+    return this.messages;
+  }
 
-    public MulticastSocket getSocket() {
-        return this.socket;
-    }
+  public MulticastSocket getSocket() {
+    return this.socket;
+  }
 
-    public byte[] getBuffer() {
-        return this.buffer;
-    }
+  public byte[] getBuffer() {
+    return this.buffer;
+  }
 
-    public boolean isAlive() {
-        return this.isAlive;
-    }
+  public boolean isAlive() {
+    return this.isAlive;
+  }
 
-    public InetAddress getAddress() {
-        return this.address;
-    }
+  public void setMessages(List<Message> messages) {
+    this.messages = messages;
+  }
 
-    public void setMessages(List<Message> messages) {
-        this.messages = messages;
-    }
+  public void setSocket(MulticastSocket socket) {
+    this.socket = socket;
+  }
 
-    public void setSocket(MulticastSocket socket) {
-        this.socket = socket;
-    }
+  public void setBuffer(byte[] buffer) {
+    this.buffer = buffer;
+  }
 
-    public void setBuffer(byte[] buffer) {
-        this.buffer = buffer;
-    }
+  public void setAlive(boolean isAlive) {
+    this.isAlive = isAlive;
+  }
 
-    public void setAlive(boolean isAlive) {
-        this.isAlive = isAlive;
-    }
+  public InetAddress getGroup() {
+    return group;
+  }
 
-    public void setAddress(InetAddress address) {
-        this.address = address;
-    }
+  public void setGroup(InetAddress group) {
+    this.group = group;
+  }
+
+
 }

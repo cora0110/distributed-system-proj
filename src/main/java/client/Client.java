@@ -90,6 +90,7 @@ public class Client {
       return;
     }
 
+    System.setProperty("java.net.preferIPv4Stack", "true");
     String clientName = args[0];
     Client client = new Client(clientName);
     try {
@@ -393,11 +394,14 @@ public class Client {
         Request request = new Request();
         request.setDocName(docName);
         request.setSectionNum(secNumber);
+        request.setToken(session.getSessionToken());
         Result result = serverInterface.edit(new User(session.getUser().getUsername()), request);
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         fileStream.write(inputStream.read());
 
-        session.setOccupiedFilename(filepath);
+        session.setOccupiedFilePath(filepath);
+        session.setOccupiedFileName(docName);
+        session.setSectionIndex(secNumber);
         long address = Long.parseLong(result.getMessage());
         try {
           messageReceiver.setNewGroup(address);
@@ -417,17 +421,19 @@ public class Client {
   private void editEnd() {
     if (session != null) {
       if (session.isEditing()) {
-        try (FileChannel fileChannel = FileChannel.open(Paths.get(session.getOccupiedFilename()), StandardOpenOption.READ);
+        try (FileChannel fileChannel = FileChannel.open(Paths.get(session.getOccupiedFilePath()), StandardOpenOption.READ);
              InputStream stream = Channels.newInputStream(fileChannel)) {
-          session.setOccupiedFilename(null);
           RemoteInputStreamServer remoteFileData = new SimpleRemoteInputStream(stream);
           Request request = new Request();
-          String[] path = session.getOccupiedFilename().split("_");
-          request.setDocName(path[0]);
-          request.setSectionNum(Integer.parseInt(path[1]));
+          request.setDocName(session.getOccupiedFileName());
+          request.setSectionNum(session.getSectionIndex());
           request.setRemoteInputStream(remoteFileData);
+          request.setToken(session.getSessionToken());
           serverInterface.editEnd(new User(session.getUser().getUsername()), request);
-          messageReceiver.setNewGroup(0L);
+          session.setOccupiedFilePath(null);
+          session.setOccupiedFileName(null);
+          session.setSectionIndex(0);
+          messageReceiver.leave();
         } catch (Exception ex) {
           printException(ex);
         }
@@ -459,10 +465,13 @@ public class Client {
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         String editor = result.getMessage();
         fileStream.write(inputStream.read());
-        if (!editor.equals("None")) {
-          System.out.println(String.format("%s is editing the section right now", editor));
-        } else System.out.println("None is editing this section");
+        if (result.getStatus() == 1) {
+          if (!editor.equals("None")) {
+            System.out.println(String.format("%s is editing the section right now", editor));
+          } else System.out.println("None is editing this section");
+        }
       } catch (IOException ex) {
+        ex.printStackTrace();
         printException(ex);
       }
     } else System.err.println("You're not logged in");
@@ -560,11 +569,10 @@ public class Client {
   private void sendMessage(String text) {
     if (session != null) {
       if (session.isEditing()) {
-        InetAddress multicastAddress;
-        if ((multicastAddress = messageReceiver.getAddress()) != null) {
+        InetAddress groupAddress;
+        if ((groupAddress = messageReceiver.getGroup()) != null) {
           try {
             Message message = new Message(session.getUser().getUsername(), text, System.currentTimeMillis());
-            InetSocketAddress groupAddress = new InetSocketAddress(multicastAddress, UDP_PORT);
             messageSender.sendMessage(message, groupAddress);
           } catch (Exception ex) {
             printException(ex);

@@ -1,13 +1,21 @@
 package server;
 
-import chat.ChatManager;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
-import model.*;
+
 import org.apache.commons.io.FileUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.SequenceInputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -17,9 +25,23 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import chat.ChatManager;
+import model.BackupData;
+import model.CommitEnum;
+import model.CommitParams;
+import model.Document;
+import model.Request;
+import model.Result;
+import model.Section;
+import model.User;
 
 public class Server extends UnicastRemoteObject implements ServerInterface {
   public int currPort;
@@ -56,6 +78,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     bindRMI();
 
+    System.setProperty("java.net.preferIPv4Stack", "true");
     // store memory database when shutting down with shutdown hook
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
@@ -120,8 +143,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       if (result.getStatus() == 1) {
         serverLogger.log(serverName, CommitEnum.CREATE_USER + ": SUCCESS");
         return new Result(1, "Create user succeed");
-      }
-      else return new Result(0, "Request aborted.");
+      } else return new Result(0, "Request aborted.");
     } else {
       return new Result(0, "Username already exists");
     }
@@ -340,8 +362,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     User editingUser = section.getOccupant();
+    RemoteInputStream remoteInputStream;
     if (editingUser == null) {
-      return new Result(1, "None");
+      try {
+        FileInputStream stream = new FileInputStream(section.getPath());
+        remoteInputStream = new SimpleRemoteInputStream(stream);
+      } catch (FileNotFoundException e) {
+        return new Result(0, "Failure accessing section.");
+      }
+      return new Result(1, "None", remoteInputStream);
     }
     return new Result(1, editingUser.getUsername());
   }
@@ -369,7 +398,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       }
       SequenceInputStream sequenceInputStream = new SequenceInputStream(streamVector.elements());
       RemoteInputStream remoteInputStream = new SimpleRemoteInputStream(sequenceInputStream);
-      return new Result(1, "Succeed", remoteInputStream);
+      return new Result(1, String.join(",", document.getOccupiedSections()), remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "Failure accessing section.");
     }
@@ -611,11 +640,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       // edit end: write input stream into section path
       // no need to update database
       case EDIT_END:
+        docName = commitParams.getDocName();
+        sectionNum = commitParams.getSectionNum();
+        commitParams.getDocumentDatabase().getDocumentByName(docName)
+                .getSectionByIndex(sectionNum).occupy(null);
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
-        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
-                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
+//        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
+//                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
         break;
       // share doc: add user to authors of a document in documentDatabase
       case SHARE:
@@ -831,8 +864,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       case EDIT:
         this.documentDatabase = commitParams.getDocumentDatabase();
+        break;
       case CREATE_DOCUMENT:
-        this.documentDatabase = commitParams.getDocumentDatabase();
+        this.documentDatabase.createNewDocument(DATA_DIR,
+                commitParams.getSectionNum(),
+                commitParams.getDocName(),
+                commitParams.getUser());
         break;
       case SHARE:
         this.documentDatabase = commitParams.getDocumentDatabase();
