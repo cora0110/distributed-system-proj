@@ -291,7 +291,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Not logged in.");
     }
 
-    if (!user.getUsername().equals(aliveUserDatabase.getUserByToken(request.getToken()).getUsername())) {
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
       return new Result(0, "User does not match token.");
     }
 
@@ -619,8 +619,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                 getSectionByIndex(sectionNum).occupy(commitParams.getUser());
         break;
       // edit end: write input stream into section path
-      // no need to update database
+      // set occupant to null in documentDatabase
       case EDIT_END:
+        docName = commitParams.getDocName();
+        sectionNum = commitParams.getSectionNum();
+        commitParams.getDocumentDatabase().getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(null);
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
