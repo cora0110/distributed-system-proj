@@ -1,4 +1,4 @@
-package model;
+package com.distributed.model;
 
 
 import java.io.Serializable;
@@ -29,27 +29,27 @@ public class Message implements Serializable {
     return s.getBytes();
   }
 
-    public String getSender() {
-        return this.sender;
-    }
+  public String getSender() {
+    return this.sender;
+  }
 
-    public String getContent() {
-        return this.content;
-    }
+  public void setSender(String sender) {
+    this.sender = sender;
+  }
 
-    public long getTimestamp() {
-        return this.timestamp;
-    }
+  public String getContent() {
+    return this.content;
+  }
 
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
+  public void setContent(String content) {
+    this.content = content;
+  }
 
-    public void setContent(String content) {
-        this.content = content;
-    }
+  public long getTimestamp() {
+    return this.timestamp;
+  }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
+  public void setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
+  }
 }

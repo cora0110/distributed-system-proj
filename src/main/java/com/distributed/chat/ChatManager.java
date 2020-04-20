@@ -1,6 +1,6 @@
-package chat;
+package com.distributed.chat;
 
-import model.Document;
+import com.distributed.model.Document;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -58,7 +58,7 @@ public class ChatManager {
   }
 
   /**
-   * Remove from chat database.
+   * Remove from com.distributed.chat database.
    *
    * @param document document need removal
    */

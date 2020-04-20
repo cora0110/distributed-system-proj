@@ -1,4 +1,4 @@
-package model;
+package com.distributed.model;
 
 import java.io.Serializable;
 import java.security.MessageDigest;
@@ -111,20 +111,20 @@ public class User implements Serializable {
     return this.username;
   }
 
-  public String getPassword() {
-    return this.password;
-  }
-
-  public List<String> getNotifications() {
-    return this.notifications;
-  }
-
   public void setUsername(String username) {
     this.username = username;
   }
 
+  public String getPassword() {
+    return this.password;
+  }
+
   public void setPassword(String password) {
     this.password = password;
+  }
+
+  public List<String> getNotifications() {
+    return this.notifications;
   }
 
   public void setNotifications(List<String> notifications) {

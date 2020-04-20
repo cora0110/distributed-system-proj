@@ -1,4 +1,4 @@
-package model;
+package com.distributed.model;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,28 +75,28 @@ public class Document implements Serializable {
     return this.name;
   }
 
-  public User getCreator() {
-    return this.creator;
-  }
-
-  public List<User> getAuthors() {
-    return this.authors;
-  }
-
-  public List<Section> getSections() {
-    return this.sections;
-  }
-
   public void setName(String name) {
     this.name = name;
+  }
+
+  public User getCreator() {
+    return this.creator;
   }
 
   public void setCreator(User creator) {
     this.creator = creator;
   }
 
+  public List<User> getAuthors() {
+    return this.authors;
+  }
+
   public void setAuthors(List<User> authors) {
     this.authors = authors;
+  }
+
+  public List<Section> getSections() {
+    return this.sections;
   }
 
   public void setSections(List<Section> sections) {

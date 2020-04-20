@@ -1,8 +1,8 @@
-package client;
+package com.distributed.client;
 
-import model.Result;
-import model.User;
-import server.ServerInterface;
+import com.distributed.model.Result;
+import com.distributed.model.User;
+import com.distributed.server.ServerInterface;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,35 +65,35 @@ public class NotiClientRunnable implements Runnable {
     }
   }
 
-    public List<String> getNotifications() {
-        return this.notifications;
-    }
+  public List<String> getNotifications() {
+    return this.notifications;
+  }
 
-    public boolean isAlive() {
-        return this.isAlive;
-    }
+  public void setNotifications(List<String> notifications) {
+    this.notifications = notifications;
+  }
 
-    public ServerInterface getServerInterface() {
-        return this.serverInterface;
-    }
+  public boolean isAlive() {
+    return this.isAlive;
+  }
 
-    public User getUser() {
-        return this.user;
-    }
+  public void setAlive(boolean isAlive) {
+    this.isAlive = isAlive;
+  }
 
-    public void setNotifications(List<String> notifications) {
-        this.notifications = notifications;
-    }
+  public ServerInterface getServerInterface() {
+    return this.serverInterface;
+  }
 
-    public void setAlive(boolean isAlive) {
-        this.isAlive = isAlive;
-    }
+  public void setServerInterface(ServerInterface serverInterface) {
+    this.serverInterface = serverInterface;
+  }
 
-    public void setServerInterface(ServerInterface serverInterface) {
-        this.serverInterface = serverInterface;
-    }
+  public User getUser() {
+    return this.user;
+  }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+  public void setUser(User user) {
+    this.user = user;
+  }
 }

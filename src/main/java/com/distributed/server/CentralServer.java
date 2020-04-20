@@ -1,4 +1,4 @@
-package server;
+package com.distributed.server;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -30,6 +30,10 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       new Server(port, centralPort);
       this.serverStatus.put(port, 0);
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400});
   }
 
   /**
@@ -71,7 +75,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     new Server(slaveServerPort, centralPort);
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
-      if(getServerStatus(serverPort) == 0) {
+      if (getServerStatus(serverPort) == 0) {
         try {
           Registry registry = LocateRegistry.getRegistry(serverPort);
           ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
@@ -83,12 +87,12 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
         }
       }
     }
-    serverLogger.log(centralName, "No alive slave server found. Data recovery failed.");
+    serverLogger.log(centralName, "No alive slave com.distributed.server found. Data recovery failed.");
   }
 
   @Override
   public int getServerStatus(int port) throws RemoteException {
-    if(serverStatus.get(port) == null) return -1;
+    if (serverStatus.get(port) == null) return -1;
     return serverStatus.get(port);
   }
 
@@ -106,8 +110,8 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   public int[] getPeers(int toPort) throws RemoteException {
     int[] peers = new int[serverPorts.length - 1];
     int i = 0;
-    for(int serverPort: serverPorts) {
-      if(serverPort == toPort) continue;
+    for (int serverPort : serverPorts) {
+      if (serverPort == toPort) continue;
       peers[i] = serverPort;
       i++;
     }
@@ -117,9 +121,5 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private int generateRandomNumber(int n) {
     Random random = new Random();
     return random.nextInt(n);
-  }
-
-  public static void main(String[] args) throws Exception {
-    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400});
   }
 }

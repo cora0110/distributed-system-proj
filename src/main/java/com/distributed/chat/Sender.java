@@ -1,11 +1,11 @@
-package chat;
+package com.distributed.chat;
+
+import com.distributed.model.Message;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-
-import model.Message;
 
 public class Sender {
 

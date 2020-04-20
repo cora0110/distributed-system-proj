@@ -1,6 +1,6 @@
-package server;
+package com.distributed.server;
 
-import model.User;
+import com.distributed.model.User;
 
 import java.io.Serializable;
 import java.util.ArrayList;

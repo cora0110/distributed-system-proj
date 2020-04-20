@@ -1,6 +1,6 @@
-package client;
+package com.distributed.client;
 
-import model.User;
+import com.distributed.model.User;
 
 public class LocalSession {
   private final String sessionToken;
@@ -30,6 +30,10 @@ public class LocalSession {
     return this.user;
   }
 
+  public void setUser(User user) {
+    this.user = user;
+  }
+
   public String getOccupiedFilePath() {
     return occupiedFilePath;
   }
@@ -44,10 +48,6 @@ public class LocalSession {
 
   public void setOccupiedFileName(String occupiedFileName) {
     this.occupiedFileName = occupiedFileName;
-  }
-
-  public void setUser(User user) {
-    this.user = user;
   }
 
   public int getSectionIndex() {

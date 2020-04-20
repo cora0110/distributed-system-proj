@@ -1,12 +1,12 @@
-package chat;
+package com.distributed.chat;
+
+import com.distributed.model.Message;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
 import java.util.List;
-
-import model.Message;
 
 public class Receiver implements Runnable {
 
@@ -77,28 +77,28 @@ public class Receiver implements Runnable {
     return this.messages;
   }
 
-  public MulticastSocket getSocket() {
-    return this.socket;
-  }
-
-  public byte[] getBuffer() {
-    return this.buffer;
-  }
-
-  public boolean isAlive() {
-    return this.isAlive;
-  }
-
   public void setMessages(List<Message> messages) {
     this.messages = messages;
+  }
+
+  public MulticastSocket getSocket() {
+    return this.socket;
   }
 
   public void setSocket(MulticastSocket socket) {
     this.socket = socket;
   }
 
+  public byte[] getBuffer() {
+    return this.buffer;
+  }
+
   public void setBuffer(byte[] buffer) {
     this.buffer = buffer;
+  }
+
+  public boolean isAlive() {
+    return this.isAlive;
   }
 
   public void setAlive(boolean isAlive) {

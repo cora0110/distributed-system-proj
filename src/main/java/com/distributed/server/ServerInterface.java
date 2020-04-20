@@ -1,6 +1,10 @@
-package server;
+package com.distributed.server;
 
-import model.*;
+import com.distributed.model.BackupData;
+import com.distributed.model.CommitParams;
+import com.distributed.model.Request;
+import com.distributed.model.Result;
+import com.distributed.model.User;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

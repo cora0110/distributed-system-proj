@@ -1,5 +1,15 @@
-package client;
+package com.distributed.client;
 
+import com.distributed.chat.Receiver;
+import com.distributed.chat.Sender;
+import com.distributed.model.Message;
+import com.distributed.model.Request;
+import com.distributed.model.Result;
+import com.distributed.model.User;
+import com.distributed.server.CentralServer;
+import com.distributed.server.CentralServerInterface;
+import com.distributed.server.Server;
+import com.distributed.server.ServerInterface;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
@@ -11,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -22,17 +31,6 @@ import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
-
-import chat.Receiver;
-import chat.Sender;
-import model.Message;
-import model.Request;
-import model.Result;
-import model.User;
-import server.CentralServer;
-import server.CentralServerInterface;
-import server.Server;
-import server.ServerInterface;
 
 public class Client {
 
@@ -86,7 +84,7 @@ public class Client {
    */
   public static void main(String[] args) {
     if (args.length != 1) {
-      System.out.println("Please specify a client name!");
+      System.out.println("Please specify a com.distributed.client name!");
       return;
     }
 
@@ -149,7 +147,7 @@ public class Client {
                     "  list: to list all the documents you are able to see and edit\n" +
                     "  share USER DOC: to share a document with another user\n" +
                     "  news: to get all the news\n" +
-                    "  receive: to retrieve all the unread chat messages\n" +
+                    "  receive: to retrieve all the unread com.distributed.chat messages\n" +
                     "  send TEXT: to send the TEXT message regarding the document being edited";
     System.out.println(message);
   }
@@ -287,9 +285,9 @@ public class Client {
   }
 
   /**
-   * Retrieve an available server from central server.
+   * Retrieve an available com.distributed.server from central com.distributed.server.
    *
-   * @return assigned server
+   * @return assigned com.distributed.server
    */
   private ServerInterface retrieveServer() {
     try {
@@ -301,7 +299,7 @@ public class Client {
       ServerInterface serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
       return serverInterface;
     } catch (Exception e) {
-      throw new RuntimeException("Unable to retrieve server.");
+      throw new RuntimeException("Unable to retrieve com.distributed.server.");
     }
   }
 
@@ -320,7 +318,8 @@ public class Client {
 
   /**
    * Authenticates the user into system trying to validate the user's password and informs the
-   * server about its notification's port used by its {@code NotificationClientThread}.
+   * com.distributed.server about its notification's port used by its {@code
+   * NotificationClientThread}.
    * <p>
    * It starts a new {@code LocalSession} object that collects all the session's information.
    *

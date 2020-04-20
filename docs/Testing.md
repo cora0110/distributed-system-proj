@@ -4,11 +4,11 @@
 
 start central:
 
-corresponding server files are created
+corresponding com.distributed.server files are created
 
-start client \<clientname>:
+start com.distributed.client \<clientname>:
 
-corresponding client file is created
+corresponding com.distributed.client file is created
 
 
 
@@ -20,7 +20,7 @@ Client Command:
 
   - Register for the first time -> registered successfully!
   - already exist -> Username already exists
-  - if restart server, register info still there -> Username already exists
+  - if restart com.distributed.server, register info still there -> Username already exists
 
 - login USER PWD: to login using USER and PWD credentials
 
@@ -32,7 +32,7 @@ Client Command:
 - create DOC SEC: to create a new document named DOC and contains SEC sections
 
   - not login -> You're not logged in
-  - login and doc not already exist -> Successfully create a new document (all the server directories can see the new doc)
+  - login and doc not already exist -> Successfully create a new document (all the com.distributed.server directories can see the new doc)
   - doc already exist -> Document already exists.
 
 - edit DOC SEC:(TMP) to edit the section SEC of DOC document (using TMP temporary filename)
@@ -57,8 +57,7 @@ Client Command:
 
 - news: to get all the news
 
-- receive: to retrieve all the unread chat messages
+- receive: to retrieve all the unread com.distributed.chat messages
 
 - send TEXT: to send the TEXT message regarding the document being edited
 
-  

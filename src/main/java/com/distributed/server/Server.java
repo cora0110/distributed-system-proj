@@ -1,5 +1,14 @@
-package server;
+package com.distributed.server;
 
+import com.distributed.chat.ChatManager;
+import com.distributed.model.BackupData;
+import com.distributed.model.CommitEnum;
+import com.distributed.model.CommitParams;
+import com.distributed.model.Document;
+import com.distributed.model.Request;
+import com.distributed.model.Result;
+import com.distributed.model.Section;
+import com.distributed.model.User;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
@@ -33,21 +42,11 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import chat.ChatManager;
-import model.BackupData;
-import model.CommitEnum;
-import model.CommitParams;
-import model.Document;
-import model.Request;
-import model.Result;
-import model.Section;
-import model.User;
-
 public class Server extends UnicastRemoteObject implements ServerInterface {
-  public int currPort;
   private final String DATA_DIR;
   private final String USER_DB_NAME = "UserDB.dat";
   private final String DOC_DB_NAME = "DocDB.dat";
+  public int currPort;
   public String serverName;
   private int centralPort;
   private ServerLogger serverLogger;
@@ -673,7 +672,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   @Override
   public boolean prepare(UUID transactionID, CommitParams commitParams) {
     if (getServerStatus(currPort) != 0) return false;
-    // change current server status: Empty -> Busy
+    // change current com.distributed.server status: Empty -> Busy
     setServerStatus(currPort, 1);
     // add the <transactionID, CommitParams> to tempStorage
     addToTempStorage(transactionID, commitParams);
@@ -728,7 +727,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       }
     }
 
-    // change status of dead server
+    // change status of dead com.distributed.server
     for (int peerPort : peers) {
       if (prepareResponseMap.get(transactionID).get(peerPort) == null) {
         setServerStatus(peerPort, 2);
@@ -737,10 +736,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     // if 0 abort ack && receive agree acks from more than half peers, commit, otherwise abort
-    if (ackCount == agreeAckCount && ackCount >= (numOfPeers / 2 + 1)) {
-      return true;
-    }
-    return false;
+    return ackCount == agreeAckCount && ackCount >= (numOfPeers / 2 + 1);
   }
 
   @Override

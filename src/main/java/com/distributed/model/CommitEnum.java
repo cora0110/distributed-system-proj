@@ -1,4 +1,4 @@
-package model;
+package com.distributed.model;
 
 public enum CommitEnum {
   PUT,

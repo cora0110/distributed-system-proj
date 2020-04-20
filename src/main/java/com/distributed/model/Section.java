@@ -1,4 +1,4 @@
-package model;
+package com.distributed.model;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,6 +54,7 @@ public class Section implements Serializable {
 
   /**
    * get the inputStream to read the section content
+   *
    * @return
    * @throws IOException
    */
@@ -64,6 +65,7 @@ public class Section implements Serializable {
 
   /**
    * get the outputStream to fill the section with a new content
+   *
    * @return
    * @throws IOException
    */
@@ -71,7 +73,6 @@ public class Section implements Serializable {
     FileChannel fileChannel = FileChannel.open(Paths.get(path), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     return Channels.newOutputStream(fileChannel);
   }
-
 
 
 }

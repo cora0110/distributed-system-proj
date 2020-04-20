@@ -1,7 +1,7 @@
-package server;
+package com.distributed.server;
 
-import model.Document;
-import model.User;
+import com.distributed.model.Document;
+import com.distributed.model.User;
 
 import java.io.IOException;
 import java.io.Serializable;

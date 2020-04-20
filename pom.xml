@@ -56,12 +56,12 @@
                         <goals>
                             <goal>single</goal>
                         </goals>
-                        <id>client-build</id>
+                        <id>=client-build</id>
                         <configuration>
                             <archive>
                                 <manifest>
                                     <addClasspath>true</addClasspath>
-                                    <mainClass>client.Client</mainClass>
+                                    <mainClass>com.distributed.client.Client</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>
@@ -81,7 +81,7 @@
                             <archive>
                                 <manifest>
                                     <addClasspath>true</addClasspath>
-                                    <mainClass>server.CentralServer</mainClass>
+                                    <mainClass>com.distributed.server.CentralServer</mainClass>
                                 </manifest>
                             </archive>
                             <descriptorRefs>
