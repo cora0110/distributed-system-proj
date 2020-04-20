@@ -4,13 +4,14 @@ import java.io.Serializable;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class User implements Serializable {
   private static final long serialVersionUID = -7351729135012380019L;
 
   private String username;
   private String password;
-  private List<String> notifications;
+  private List<String> notifications = new ArrayList<>();
 
   public User(String username, String password) {
     try {
@@ -93,27 +94,40 @@ public class User implements Serializable {
     }
   }
 
-    public String getUsername() {
-        return this.username;
-    }
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    User user = (User) o;
+    return Objects.equals(username, user.username);
+  }
 
-    public String getPassword() {
-        return this.password;
-    }
+  @Override
+  public int hashCode() {
+    return Objects.hash(username, password, notifications);
+  }
 
-    public List<String> getNotifications() {
-        return this.notifications;
-    }
+  public String getUsername() {
+    return this.username;
+  }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+  public String getPassword() {
+    return this.password;
+  }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+  public List<String> getNotifications() {
+    return this.notifications;
+  }
 
-    public void setNotifications(List<String> notifications) {
-        this.notifications = notifications;
-    }
+  public void setUsername(String username) {
+    this.username = username;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
+  }
+
+  public void setNotifications(List<String> notifications) {
+    this.notifications = notifications;
+  }
 }

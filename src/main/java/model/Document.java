@@ -11,13 +11,14 @@ public class Document implements Serializable {
 
   private String name;
   private User creator;
-  private List<User> authors;
-  private List<Section> sections;
+  private List<User> authors = new ArrayList<>();
+  private List<Section> sections = new ArrayList<>();
 
   public Document(String name, User creator, List<Section> sections) {
     this.name = name;
     this.creator = creator;
     this.sections = sections;
+    this.authors = new ArrayList<>();
   }
 
   /**

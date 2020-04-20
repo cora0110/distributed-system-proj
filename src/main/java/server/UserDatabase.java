@@ -9,7 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class UserDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
-  private List<User> users;
+  private List<User> users = new ArrayList<>();
   private ReentrantReadWriteLock mutex;
 
   /**

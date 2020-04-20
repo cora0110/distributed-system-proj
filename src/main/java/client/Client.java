@@ -1,20 +1,15 @@
 package client;
 
-import chat.Receiver;
-import chat.Sender;
 import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
-import model.Message;
-import model.Request;
-import model.Result;
-import model.User;
-import server.CentralServer;
-import server.CentralServerInterface;
-import server.Server;
-import server.ServerInterface;
 
-import java.io.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
@@ -27,6 +22,17 @@ import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+
+import chat.Receiver;
+import chat.Sender;
+import model.Message;
+import model.Request;
+import model.Result;
+import model.User;
+import server.CentralServer;
+import server.CentralServerInterface;
+import server.Server;
+import server.ServerInterface;
 
 public class Client {
 
@@ -79,7 +85,7 @@ public class Client {
    * @param args command arguments
    */
   public static void main(String[] args) {
-    if(args.length != 1) {
+    if (args.length != 1) {
       System.out.println("Please specify a client name!");
       return;
     }
@@ -302,7 +308,7 @@ public class Client {
    */
   private void register(String username, String password) throws Exception {
     Result result = serverInterface.createUser(new User(username, password));
-    if(result.getStatus() == 1) {
+    if (result.getStatus() == 1) {
       System.out.println("User " + username + " registered successfully!");
     } else {
       System.err.println(result.getMessage());
@@ -494,6 +500,8 @@ public class Client {
   private void share(String user, String docName) throws Exception {
     Request request = new Request();
     request.setToken(session.getSessionToken());
+    request.setTargetUser(new User(user));
+    request.setDocName(docName);
     serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
   }
 
