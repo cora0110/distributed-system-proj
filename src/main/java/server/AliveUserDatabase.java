@@ -73,7 +73,7 @@ public class AliveUserDatabase implements Serializable {
   }
 
   public boolean isLoggedIn(String username) {
-    return aliveUsers.containsKey(username);
+    return aliveUsers.containsKey(username) && aliveUsers.get(username).getToken() != null;
   }
 
   OnlineUserRecord getOnlineUserRecord(String username) {
@@ -134,6 +134,10 @@ public class AliveUserDatabase implements Serializable {
      * @return true if {@code token} is the actual one, false otherwise
      */
     boolean verifyToken(String token) {
+      if(token == null) {
+        if(this.token == null) return true;
+        return false;
+      }
       return (this.token.compareTo(token) == 0);
     }
   }

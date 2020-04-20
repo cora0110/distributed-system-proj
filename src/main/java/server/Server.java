@@ -151,7 +151,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result login(User user) throws RemoteException {
-    if (aliveUserDatabase.isLoggedIn(user.getUsername()) && aliveUserDatabase.getTokenByUser(user.getUsername()) != null) {
+    if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
       return new Result(0, "Already logged in.");
     } else {
       // check username and password
@@ -252,6 +252,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
       // assign multicast address
       long chatAddress = chatManager.getChatAddress(document);
+      serverLogger.log(serverName, CommitEnum.EDIT + ": SUCCESS");
       return new Result(1, String.valueOf(chatAddress), remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "IO Exception while accessing the section");
@@ -301,6 +302,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     if (result.getStatus() == 0) {
       return new Result(0, "Request aborted");
     } else {
+      serverLogger.log(serverName, CommitEnum.EDIT_END + ": SUCCESS");
       return new Result(1, "Succeed");
     }
   }
@@ -311,7 +313,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Not logged in.");
     }
 
-    if (!user.getUsername().equals(aliveUserDatabase.getUserByToken(request.getToken()).getUsername())) {
+    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
       return new Result(0, "User does not match token.");
     }
 
@@ -326,10 +328,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     // TODO: 4/19/20 should be an updated temporary param
-    commitParams.setDocumentDatabase(documentDatabase);
+    //commitParams.setDocumentDatabase(documentDatabase);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
+      serverLogger.log(serverName, CommitEnum.CREATE_DOCUMENT + ": SUCCESS");
+      serverLogger.log("File successfully created: " + commitParams.getDocName());
       return new Result(1, "Succeed");
     } else {
       return new Result(0, "Request aborted.");
@@ -364,6 +368,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     User editingUser = section.getOccupant();
     RemoteInputStream remoteInputStream;
     if (editingUser == null) {
+      serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
       try {
         FileInputStream stream = new FileInputStream(section.getPath());
         remoteInputStream = new SimpleRemoteInputStream(stream);
@@ -372,6 +377,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       }
       return new Result(1, "None", remoteInputStream);
     }
+    serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
     return new Result(1, editingUser.getUsername());
   }
 
@@ -411,17 +417,19 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Not logged in.");
     }
 
-    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+    if (!user.getUsername().equals(aliveUserDatabase.getUserByToken(request.getToken()).getUsername())) {
       return new Result(0, "User does not match token.");
     }
 
     String[] docs = documentDatabase.getAllDocumentsNames(user);
 
-    if (docs.length == 0) {
+    if (docs == null || docs.length == 0) {
+      serverLogger.log(serverName, CommitEnum.LIST + ": SUCCESS");
       return new Result(1, "None");
     }
 
     String names = String.join(",", docs);
+    serverLogger.log(serverName, CommitEnum.LIST + ": SUCCESS");
     return new Result(1, names);
   }
 
@@ -456,6 +464,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 1) {
+      serverLogger.log(serverName, CommitEnum.SHARE + ": SUCCESS");
       return new Result(1, "Succeed");
     } else {
       return new Result(0, "Request aborted");
@@ -638,12 +647,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
                 getSectionByIndex(sectionNum).occupy(commitParams.getUser());
         break;
       // edit end: write input stream into section path
-      // no need to update database
+      // set occupant to null in documentDatabase
       case EDIT_END:
         docName = commitParams.getDocName();
         sectionNum = commitParams.getSectionNum();
-        commitParams.getDocumentDatabase().getDocumentByName(docName)
-                .getSectionByIndex(sectionNum).occupy(null);
+        commitParams.getDocumentDatabase().getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(null);
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
@@ -864,16 +873,18 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       case EDIT:
         this.documentDatabase = commitParams.getDocumentDatabase();
+//      case CREATE_DOCUMENT:
+//        this.documentDatabase = commitParams.getDocumentDatabase();
+        break;
+      case SHARE:
+        this.documentDatabase = commitParams.getDocumentDatabase();
+        this.userDatabase = commitParams.getUserDatabase();
         break;
       case CREATE_DOCUMENT:
         this.documentDatabase.createNewDocument(DATA_DIR,
                 commitParams.getSectionNum(),
                 commitParams.getDocName(),
                 commitParams.getUser());
-        break;
-      case SHARE:
-        this.documentDatabase = commitParams.getDocumentDatabase();
-        this.userDatabase = commitParams.getUserDatabase();
         break;
       case EDIT_END:
         OutputStream fileStream = null;
