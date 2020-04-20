@@ -32,7 +32,8 @@ Client Command:
 - create DOC SEC: to create a new document named DOC and contains SEC sections
 
   - not login -> You're not logged in
-  - 
+  - login and doc not already exist -> Successfully create a new document (all the server directories can see the new doc)
+  - doc already exist -> Document already exists.
 
 - edit DOC SEC:(TMP) to edit the section SEC of DOC document (using TMP temporary filename)
 
@@ -48,6 +49,8 @@ Client Command:
   - not login -> You're not logged in
 
 - list: to list all the documents you are able to see and edit
+
+  - 
 
 - share USER DOC: to share a document with another user
 

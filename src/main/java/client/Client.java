@@ -342,7 +342,11 @@ public class Client {
   private void logout() throws Exception {
     if (session != null) {
       if (!session.isEditing()) {
-        serverInterface.logout(new User(session.getUser().getUsername()));
+        Result result = serverInterface.logout(new User(session.getUser().getUsername()));
+        if (result.getStatus() == 0) {
+          System.err.println(result.getMessage());
+          return;
+        }
         session = null;
         notiClientRunnable.clearNotificationList();
         notiClientRunnable.setUser(null);
@@ -365,7 +369,12 @@ public class Client {
       request.setToken(session.getSessionToken());
       request.setDocName(docName);
       request.setSectionNum(secNumber);
-      serverInterface.createDocument(user, request);
+      Result result = serverInterface.createDocument(user, request);
+      if (result.getStatus() == 0) {
+        System.err.println(result.getMessage());
+        return;
+      }
+      System.out.println("Successfully create a new document.");
     } else System.err.println("You're not logged in");
   }
 

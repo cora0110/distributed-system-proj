@@ -304,10 +304,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     // TODO: 4/19/20 should be an updated temporary param
-    commitParams.setDocumentDatabase(documentDatabase);
+    //commitParams.setDocumentDatabase(documentDatabase);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
+      serverLogger.log(serverName, CommitEnum.CREATE_DOCUMENT + ": SUCCESS");
+      serverLogger.log("File successfully created: " + commitParams.getDocName());
       return new Result(1, "Succeed");
     } else {
       return new Result(0, "Request aborted.");
@@ -382,13 +384,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return new Result(0, "Not logged in.");
     }
 
-    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+    if (!user.getUsername().equals(aliveUserDatabase.getUserByToken(request.getToken()).getUsername())) {
       return new Result(0, "User does not match token.");
     }
 
     String[] docs = documentDatabase.getAllDocumentsNames(user);
 
-    if (docs.length == 0) {
+    if (docs == null || docs.length == 0) {
       return new Result(1, "None");
     }
 
