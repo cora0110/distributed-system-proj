@@ -18,7 +18,8 @@ Client Command:
 
 - register USER PWD: to register a new account with username USER and password PWD
 
-  - if restart server, register info is still stored in server .dat file
+  - Register for the first time
+  - already exist
 
 - login USER PWD: to login using USER and PWD credentials
 

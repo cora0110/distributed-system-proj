@@ -178,10 +178,7 @@ public class Client {
               if (args.length > 2) {
                 String username = args[1];
                 String password = args[2];
-                if (register(username, password))
-                  System.out.println("User " + username + " registered successfully!");
-                else
-                  System.out.println("Registration error: user already exists.");
+                register(username, password);
               } else throw new IllegalArgumentException();
               break;
             case "login":
@@ -303,12 +300,12 @@ public class Client {
   /**
    * Register a new user.
    */
-  private boolean register(String username, String password) {
-    try {
-      serverInterface.createUser(new User(username, password));
-      return true;
-    } catch (Exception e) {
-      return false;
+  private void register(String username, String password) throws Exception {
+    Result result = serverInterface.createUser(new User(username, password));
+    if(result.getStatus() == 1) {
+      System.out.println("User " + username + " registered successfully!");
+    } else {
+      System.err.println(result.getMessage());
     }
   }
 
@@ -350,6 +347,7 @@ public class Client {
         notiClientRunnable.setUser(null);
         notiClientRunnable.stop();
         serverInterface.logout(new User(session.getUser().getUsername()));
+        System.out.println("Successfully logged out.");
       } else System.err.println("You should 'stopedit' before logging out");
     } else System.err.println("You're not logged in");
   }

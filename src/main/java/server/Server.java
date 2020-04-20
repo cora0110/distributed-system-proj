@@ -174,7 +174,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 1) {
-      System.out.println("User logged out: " + user.getUsername());
+      serverLogger.log(serverName, CommitEnum.LOGOUT + ": SUCCESS");
+      serverLogger.log("User logged out: " + user.getUsername());
       return new Result(1, "succeed");
     } else {
       return new Result(0, "Request aborted.");
