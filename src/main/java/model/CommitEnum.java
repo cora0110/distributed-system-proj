@@ -13,6 +13,9 @@ public enum CommitEnum {
   EDIT,
   EDIT_END,
   CREATE_DOCUMENT,
-  CREATE_USER
+  CREATE_USER,
+  SHOW_SECTION,
+  SHOW_DOC_CONTENT,
+  LIST,
   ;
 }

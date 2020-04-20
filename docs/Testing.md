@@ -50,7 +50,8 @@ Client Command:
 
 - list: to list all the documents you are able to see and edit
 
-  - 
+  - if none -> none
+  - if exist -> list them \<file1>,\<file2>...
 
 - share USER DOC: to share a document with another user
 

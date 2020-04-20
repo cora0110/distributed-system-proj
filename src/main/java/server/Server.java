@@ -230,6 +230,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
       // assign multicast address
       long chatAddress = chatManager.getChatAddress(document);
+      serverLogger.log(serverName, CommitEnum.EDIT + ": SUCCESS");
       return new Result(1, String.valueOf(chatAddress), remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "IO Exception while accessing the section");
@@ -279,6 +280,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     if (result.getStatus() == 0) {
       return new Result(0, "Request aborted");
     } else {
+      serverLogger.log(serverName, CommitEnum.EDIT_END + ": SUCCESS");
       return new Result(1, "Succeed");
     }
   }
@@ -343,8 +345,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
     User editingUser = section.getOccupant();
     if (editingUser == null) {
+      serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
       return new Result(1, "None");
     }
+    serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
     return new Result(1, editingUser.getUsername());
   }
 
@@ -371,6 +375,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       }
       SequenceInputStream sequenceInputStream = new SequenceInputStream(streamVector.elements());
       RemoteInputStream remoteInputStream = new SimpleRemoteInputStream(sequenceInputStream);
+      serverLogger.log(serverName, CommitEnum.SHOW_DOC_CONTENT + ": SUCCESS");
       return new Result(1, "Succeed", remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "Failure accessing section.");
@@ -391,10 +396,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     String[] docs = documentDatabase.getAllDocumentsNames(user);
 
     if (docs == null || docs.length == 0) {
+      serverLogger.log(serverName, CommitEnum.LIST + ": SUCCESS");
       return new Result(1, "None");
     }
 
     String names = String.join(",", docs);
+    serverLogger.log(serverName, CommitEnum.LIST + ": SUCCESS");
     return new Result(1, names);
   }
 
@@ -429,6 +436,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 1) {
+      serverLogger.log(serverName, CommitEnum.SHARE + ": SUCCESS");
       return new Result(1, "Succeed");
     } else {
       return new Result(0, "Request aborted");
@@ -616,8 +624,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
-        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
-                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
+//        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
+//                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
         break;
       // share doc: add user to authors of a document in documentDatabase
       case SHARE:
@@ -833,12 +841,18 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       case EDIT:
         this.documentDatabase = commitParams.getDocumentDatabase();
-      case CREATE_DOCUMENT:
-        this.documentDatabase = commitParams.getDocumentDatabase();
+//      case CREATE_DOCUMENT:
+//        this.documentDatabase = commitParams.getDocumentDatabase();
         break;
       case SHARE:
         this.documentDatabase = commitParams.getDocumentDatabase();
         this.userDatabase = commitParams.getUserDatabase();
+        break;
+      case CREATE_DOCUMENT:
+        this.documentDatabase.createNewDocument(DATA_DIR,
+                commitParams.getSectionNum(),
+                commitParams.getDocName(),
+                commitParams.getUser());
         break;
       case EDIT_END:
         OutputStream fileStream = null;
