@@ -342,11 +342,11 @@ public class Client {
   private void logout() throws Exception {
     if (session != null) {
       if (!session.isEditing()) {
+        serverInterface.logout(new User(session.getUser().getUsername()));
         session = null;
         notiClientRunnable.clearNotificationList();
         notiClientRunnable.setUser(null);
         notiClientRunnable.stop();
-        serverInterface.logout(new User(session.getUser().getUsername()));
         System.out.println("Successfully logged out.");
       } else System.err.println("You should 'stopedit' before logging out");
     } else System.err.println("You're not logged in");

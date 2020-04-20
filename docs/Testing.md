@@ -18,10 +18,16 @@ Client Command:
 
 - register USER PWD: to register a new account with username USER and password PWD
 
-  - Register for the first time
-  - already exist
+  - Register for the first time -> registered successfully!
+  - already exist -> Username already exists
+  - if restart server, register info still there -> Username already exists
 
 - login USER PWD: to login using USER and PWD credentials
+
+  - login for the first time -> Logged in successfully as xxx
+  - already login -> You're already logged in.
+  - wrong password -> Unregistered or password do not match.
+  - login a user not register -> Unregistered or password do not match.
 
 - create DOC SEC: to create a new document named DOC and contains SEC sections
 
@@ -34,6 +40,9 @@ Client Command:
 - showdoc DOC:(OUT) to download the content concatenation of all the document's sections (using OUT output filename)
 
 - logout: to logout
+
+  - already login -> Successfully logged out.
+  - not login -> You're not logged in
 
 - list: to list all the documents you are able to see and edit
 
