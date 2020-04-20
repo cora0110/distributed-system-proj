@@ -134,6 +134,10 @@ public class AliveUserDatabase implements Serializable {
      * @return true if {@code token} is the actual one, false otherwise
      */
     boolean verifyToken(String token) {
+      if(token == null) {
+        if(this.token == null) return true;
+        return false;
+      }
       return (this.token.compareTo(token) == 0);
     }
   }
