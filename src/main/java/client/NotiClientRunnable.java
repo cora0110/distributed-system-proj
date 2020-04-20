@@ -24,7 +24,8 @@ public class NotiClientRunnable implements Runnable {
       try {
         Result result = serverInterface.getNotifications(user);
         List<String> unreadNotifications = result.getUnreadNotifications();
-        if (null != unreadNotifications) {
+        if (null != unreadNotifications && !unreadNotifications.isEmpty()) {
+          System.out.println("!!!!" + unreadNotifications);
           notifications = unreadNotifications;
           user.setNotifications(unreadNotifications);
         }
@@ -45,14 +46,14 @@ public class NotiClientRunnable implements Runnable {
    * @return the notification strings array
    */
   public List<String> getAllNotifications() {
-    List<String> notifications = new ArrayList<>();
+    List<String> res = new ArrayList<>();
     synchronized (notifications) {
       if (!notifications.isEmpty()) {
-        notifications.addAll(notifications);
+        res.addAll(notifications);
         notifications.clear();
       }
     }
-    return notifications;
+    return res;
   }
 
   /**

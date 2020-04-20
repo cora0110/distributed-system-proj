@@ -420,16 +420,11 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.SHARE);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
-    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setDocumentDatabase(documentDatabase);
+    commitParams.setUserDatabase(userDatabase);
+    commitParams.setTargetUser(request.getTargetUser().getUsername());
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
-
-    //TODO push notification test
-    document.addAuthor(request.getTargetUser());
-    User sharedUser = userDatabase.getUserByUsername(request.getTargetUser().getUsername());
-    sharedUser.pushNewNotification("User " +
-            request.getTargetUser().getUsername() + " can now access the document " + document.getName());
 
     if (result.getStatus() == 1) {
       return new Result(1, "Succeed");
@@ -625,7 +620,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       // share doc: add user to authors of a document in documentDatabase
       case SHARE:
         commitParams.getDocumentDatabase().
-                getDocumentByName(commitParams.getDocName()).addAuthor(commitParams.getUser());
+                getDocumentByName(commitParams.getDocName()).addAuthor(new User(commitParams.getTargetUser()));
+        User sharedUser = commitParams.getUserDatabase().getUserByUsername(commitParams.getTargetUser());
+        sharedUser.pushNewNotification(commitParams.getDocName());
         break;
     }
     return commitParams;
@@ -833,9 +830,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
         break;
       case EDIT:
+        this.documentDatabase = commitParams.getDocumentDatabase();
       case CREATE_DOCUMENT:
+        this.documentDatabase = commitParams.getDocumentDatabase();
+        break;
       case SHARE:
         this.documentDatabase = commitParams.getDocumentDatabase();
+        this.userDatabase = commitParams.getUserDatabase();
         break;
       case EDIT_END:
         OutputStream fileStream = null;

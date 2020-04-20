@@ -15,6 +15,7 @@ public class CommitParams implements Serializable {
 
   private String docName;
   private int sectionNum;
+  private String targetUser;
 
   // 0: userDB, 1:aliveUserDB, 2:docDB
 //  private int DBCode;
@@ -100,13 +101,12 @@ public class CommitParams implements Serializable {
         this.userDatabase = userDatabase;
     }
 
-//  public CommitParams(User user, int type, RemoteInputStream inputStream, String docNanme, int sectionNum, int DBCode) {
-//    this.user = user;
-//    this.type = type;
-//    this.inputStream = inputStream;
-//    this.docNanme = docNanme;
-//    this.sectionNum = sectionNum;
-//    this.DBCode = DBCode;
-//  }
+  public String getTargetUser() {
+    return targetUser;
+  }
+
+  public void setTargetUser(String targetUser) {
+    this.targetUser = targetUser;
+  }
 
 }
