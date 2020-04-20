@@ -275,8 +275,10 @@ public class Client {
               throw new IllegalArgumentException();
           }
         } catch (IllegalArgumentException ex) {
+          ex.printStackTrace();
           System.err.println("Unsupported arguments. Please try again.");
         } catch (Exception e) {
+          e.printStackTrace();
           System.err.println("Internal error. Please try again.");
         }
       }
@@ -403,6 +405,10 @@ public class Client {
         request.setDocName(docName);
         request.setSectionNum(secNumber);
         Result result = serverInterface.edit(new User(session.getUser().getUsername()), request);
+        if (result.getStatus() == 0) {
+          System.err.println(result.getMessage());
+          return;
+        }
         InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
         fileStream.write(inputStream.read());
 

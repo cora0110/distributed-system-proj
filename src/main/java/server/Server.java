@@ -129,7 +129,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result login(User user) throws RemoteException {
-    if (aliveUserDatabase.isLoggedIn(user.getUsername()) && aliveUserDatabase.getTokenByUser(user.getUsername()) != null) {
+    if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
       return new Result(0, "Already logged in.");
     } else {
       // check username and password
