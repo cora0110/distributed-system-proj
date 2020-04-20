@@ -129,7 +129,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result login(User user) throws RemoteException {
-    if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
+    if (aliveUserDatabase.isLoggedIn(user.getUsername()) && aliveUserDatabase.getTokenByUser(user.getUsername()) != null) {
       return new Result(0, "Already logged in.");
     } else {
       // check username and password
@@ -619,8 +619,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
-        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
-                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
+//        commitParams.getDocumentDatabase().createNewDocument(DATA_DIR,
+//                commitParams.getSectionNum(), commitParams.getDocName(), commitParams.getUser());
         break;
       // share doc: add user to authors of a document in documentDatabase
       case SHARE:
@@ -833,9 +833,14 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
         break;
       case EDIT:
-      case CREATE_DOCUMENT:
       case SHARE:
         this.documentDatabase = commitParams.getDocumentDatabase();
+        break;
+      case CREATE_DOCUMENT:
+        this.documentDatabase.createNewDocument(DATA_DIR,
+                commitParams.getSectionNum(),
+                commitParams.getDocName(),
+                commitParams.getUser());
         break;
       case EDIT_END:
         OutputStream fileStream = null;
