@@ -51,8 +51,10 @@ public class Admin {
                                 throw new IllegalArgumentException();
                         }
                     } catch (IllegalArgumentException ex) {
+                        ex.printStackTrace();
                         System.err.println("Unsupported arguments. Please try again.");
                     } catch (Exception e) {
+                        e.printStackTrace();
                         System.err.println("Internal error. Please try again.");
                     }
                 }

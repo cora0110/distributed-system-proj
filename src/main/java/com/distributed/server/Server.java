@@ -531,17 +531,17 @@ public class Server implements ServerInterface {
 
     // user file
     // DATA_DIR + "DocDB.dat"
-    String targetDataDir = "./server_data" + targetPort + "/";
+    String targetDataDir = "./server_data_" + targetPort + "/";
     // put userDatabase dat file
-    fileStreamMap.put(targetDataDir + "UserDB.dat", getRemoteInputStream(DATA_DIR + "UserDB.dat"));
+    fileStreamMap.put(targetDataDir + USER_DB_NAME, getRemoteInputStream(DATA_DIR + USER_DB_NAME));
     // put DocumentDatabase dat file
-    fileStreamMap.put(targetDataDir + "DocDB.dat", getRemoteInputStream(DATA_DIR + "DocDB.dat"));
+    fileStreamMap.put(targetDataDir + DOC_DB_NAME, getRemoteInputStream(DATA_DIR + DOC_DB_NAME));
 
     // put section files
     for (Document doc : documentDatabase.getDocuments()) {
       for (Section section : doc.getSections()) {
         String currPath = section.getPath();
-        String pattern = "(.*data)([0-9]+)(/.*)";
+        String pattern = "(.*data_)([0-9]+)(/.*)";
         // replace port in the path
         String targetPath = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
         fileStreamMap.put(targetPath, getRemoteInputStream(currPath));

@@ -6,9 +6,11 @@ import com.distributed.server.DocumentDatabase;
 import com.distributed.server.UserDatabase;
 import com.healthmarketscience.rmiio.RemoteInputStream;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public class BackupData {
+public class BackupData implements Serializable {
+  private static final long serialVersionUID = 1L;
   DocumentDatabase documentDatabase;
   UserDatabase userDatabase;
   AliveUserDatabase aliveUserDatabase;

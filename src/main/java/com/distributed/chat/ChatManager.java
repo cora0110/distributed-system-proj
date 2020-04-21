@@ -2,12 +2,13 @@ package com.distributed.chat;
 
 import com.distributed.model.Document;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ChatManager {
-
+public class ChatManager implements Serializable {
+  private static final long serialVersionUID = 1L;
   /**
    * Full range is from 239.0.0.1 to 239.255.255.254;
    */

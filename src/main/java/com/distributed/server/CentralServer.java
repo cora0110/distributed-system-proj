@@ -76,17 +76,19 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
-    Server obj = new Server(slaveServerPort, centralPort);
+    if(serverStatus.get(slaveServerPort) != 2) return;
+    Server server = new Server(slaveServerPort, centralPort);
+    ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
     Registry registry = LocateRegistry.getRegistry(slaveServerPort);
-    registry.rebind(Server.class.getSimpleName() + slaveServerPort, obj);
+    registry.rebind(Server.class.getSimpleName() + slaveServerPort, stub);
 
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
       if (getServerStatus(serverPort) == 0) {
         try {
           registry = LocateRegistry.getRegistry(serverPort);
-          ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
-          stub.helpRecoverData(slaveServerPort);
+          ServerInterface aliveServer = (ServerInterface) registry.lookup("Server" + serverPort);
+          aliveServer.helpRecoverData(slaveServerPort);
           serverStatus.put(slaveServerPort, 0);
           return;
         } catch (Exception e) {
