@@ -52,6 +52,10 @@ public class Section implements Serializable {
     return path;
   }
 
+  public void setPath(String path) {
+    this.path = path;
+  }
+
   /**
    * get the inputStream to read the section content
    *
