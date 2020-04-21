@@ -33,7 +33,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   }
 
   public static void main(String[] args) throws Exception {
-    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400});
+    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400, 1500});
   }
 
   /**
@@ -66,6 +66,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       stub.kill();
       serverStatus.put(slaveServerPort, 2);
     } catch (Exception e) {
+      e.printStackTrace();
       serverLogger.log(centralName, e.getMessage());
     }
   }
@@ -73,6 +74,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
     new Server(slaveServerPort, centralPort);
+    serverLogger.log(centralName, "restart " + slaveServerPort);
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
       if (getServerStatus(serverPort) == 0) {
@@ -83,6 +85,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
           serverStatus.put(slaveServerPort, 0);
           break;
         } catch (Exception e) {
+          e.printStackTrace();
           serverLogger.log(centralName, e.getMessage());
         }
       }

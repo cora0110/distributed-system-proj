@@ -367,13 +367,13 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     User editingUser = section.getOccupant();
     RemoteInputStream remoteInputStream;
     if (editingUser == null) {
-      serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
       try {
         FileInputStream stream = new FileInputStream(section.getPath());
         remoteInputStream = new SimpleRemoteInputStream(stream);
       } catch (FileNotFoundException e) {
         return new Result(0, "Failure accessing section.");
       }
+      serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
       return new Result(1, "None", remoteInputStream);
     }
     serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
@@ -555,6 +555,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       stub.recoverData(backupData);
       return true;
     } catch (Exception e) {
+      e.printStackTrace();
       serverLogger.log("Failed Restart Server! Exception: " + e.getMessage());
     }
     return false;
@@ -775,8 +776,8 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     } else {
       serverLogger.log(serverName, "Abort: sent");
       for (int peerPort : peers) {
-        Boolean prepareAck = prepareResponseMap.get(transactionID).get(peerPort);
-        if (prepareAck != null && prepareAck) {
+        //Boolean prepareAck = prepareResponseMap.get(transactionID).get(peerPort);
+        if (prepareResponseMap.get(transactionID).get(peerPort) != null && prepareResponseMap.get(transactionID).get(peerPort)) {
           try {
             Registry registry = LocateRegistry.getRegistry(peerPort);
             ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + currPort);
