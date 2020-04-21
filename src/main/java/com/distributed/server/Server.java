@@ -546,6 +546,7 @@ public class Server implements ServerInterface {
         String pattern = "(.*data_)([0-9]+)(/.*)";
         // replace port in the path
         String targetPath = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
+        section.setPath(targetPath);
         fileStreamMap.put(targetPath, getRemoteInputStream(currPath));
       }
     }
@@ -575,7 +576,7 @@ public class Server implements ServerInterface {
 
   private InputStream getInputStream(RemoteInputStream remoteInputStream) {
     try {
-      RemoteInputStreamClient.wrap(remoteInputStream);
+      return RemoteInputStreamClient.wrap(remoteInputStream);
     } catch (IOException e) {
       serverLogger.log(e.getMessage());
     }

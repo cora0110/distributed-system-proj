@@ -399,7 +399,12 @@ public class Client {
           request.setSectionNum(session.getSectionIndex());
           request.setRemoteInputStream(remoteFileData);
           request.setToken(session.getSessionToken());
-          serverInterface.editEnd(new User(session.getUser().getUsername()), request);
+          Result result = serverInterface.editEnd(new User(session.getUser().getUsername()), request);
+          if (result.getStatus() == 0) {
+            System.err.println(result.getMessage());
+            System.out.println("ready to send");
+            return;
+          }
           session.setOccupiedFilePath(null);
           session.setOccupiedFileName(null);
           session.setSectionIndex(0);
