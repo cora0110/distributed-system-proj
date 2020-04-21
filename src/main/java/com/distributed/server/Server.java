@@ -912,10 +912,14 @@ public class Server implements ServerInterface {
           Section editingSection = documentDatabase.
                   getDocumentByName(commitParams.getDocName()).
                   getSectionByIndex(commitParams.getSectionNum());
-          fileStream = editingSection.getWriteStream();
+//          System.out.println("ori path "+editingSection.getPath());
+          String targetPath = editingSection.getPathByPort(currPort);
+//          System.out.println("path "+targetPath);
+          fileStream = this.getWriteStream(targetPath);
+
           byte[] bytes = commitParams.getBytes();
           String str = new String(bytes, StandardCharsets.UTF_8);
-          System.out.println("content: " + str);
+//          System.out.println("content: " + str);
           fileStream.write(bytes);
         } catch (IOException e) {
           e.printStackTrace();
@@ -939,6 +943,11 @@ public class Server implements ServerInterface {
         userDatabase = commitParams.getUserDatabase();
         break;
     }
+  }
+
+  public OutputStream getWriteStream(String path) throws IOException {
+    FileChannel fileChannel = FileChannel.open(Paths.get(path), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+    return Channels.newOutputStream(fileChannel);
   }
 
   private int getServerStatus(int port) {

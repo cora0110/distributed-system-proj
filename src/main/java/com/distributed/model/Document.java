@@ -32,9 +32,8 @@ public class Document implements Serializable {
       if (!mkdir) throw new RuntimeException("Unable to create document.");
     }
     List<Section> sections = new ArrayList<>();
-    long timestamp = System.currentTimeMillis();
     for (int i = 0; i < sectionsNumber; i++) {
-      Section sec = new Section(path, String.valueOf(timestamp + i));
+      Section sec = new Section(path, String.valueOf(i));
       sections.add(sec);
       File sectionFile = new File(sec.getPath());
       sectionFile.createNewFile();

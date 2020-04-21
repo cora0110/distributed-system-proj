@@ -52,6 +52,17 @@ public class Section implements Serializable {
     return path;
   }
 
+  // a new string replace port in current path
+  public String getPathByPort(int curPort) {
+    String[] split = path.split("/", 3);
+    String[] server = split[1].split("_");
+    String originalPort = server[2];
+    split[1] = split[1].replace(originalPort, String.valueOf(curPort));
+    StringBuilder sb = new StringBuilder();
+    sb.append(split[0]).append("/").append(split[1]).append("/").append(split[2]);
+    return sb.toString();
+  }
+
   public void setPath(String path) {
     this.path = path;
   }
