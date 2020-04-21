@@ -12,6 +12,7 @@ public class CommitParams implements Serializable {
   private User user;
   private CommitEnum commitEnum;
   private RemoteInputStream inputStream;
+  private byte[] bytes;
 
   private String docName;
   private int sectionNum;
@@ -28,6 +29,14 @@ public class CommitParams implements Serializable {
   private UserDatabase userDatabase;
 
   public CommitParams() {
+  }
+
+  public byte[] getBytes() {
+    return bytes;
+  }
+
+  public void setBytes(byte[] bytes) {
+    this.bytes = bytes;
   }
 
   public User getUser() {

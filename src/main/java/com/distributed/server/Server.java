@@ -15,6 +15,7 @@ import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
 import org.apache.commons.io.FileUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -27,6 +28,7 @@ import java.io.OutputStream;
 import java.io.SequenceInputStream;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.rmi.RemoteException;
@@ -254,50 +256,61 @@ public class Server implements ServerInterface {
 
   @Override
   public Result editEnd(User user, Request request) throws RemoteException {
-    if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
-      return new Result(0, "Not logged in.");
-    }
+    try {
+      if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
+        return new Result(0, "Not logged in.");
+      }
 
-    if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
-      return new Result(0, "User does not match token.");
-    }
+      if (!user.equals(aliveUserDatabase.getUserByToken(request.getToken()))) {
+        return new Result(0, "User does not match token.");
+      }
 
-    Document document = documentDatabase.getDocumentByName(request.getDocName());
-    if (document == null) {
-      return new Result(0, "Document does not exists.");
-    }
+      Document document = documentDatabase.getDocumentByName(request.getDocName());
+      if (document == null) {
+        return new Result(0, "Document does not exists.");
+      }
 
-    if (!document.hasPermit(user)) {
-      return new Result(0, "You do not have access.");
-    }
+      if (!document.hasPermit(user)) {
+        return new Result(0, "You do not have access.");
+      }
 
-    Section section = document.getSectionByIndex(request.getSectionNum());
-    if (section == null) {
-      return new Result(0, "Section does not exist.");
-    }
+      Section section = document.getSectionByIndex(request.getSectionNum());
+      if (section == null) {
+        return new Result(0, "Section does not exist.");
+      }
 
-    User editingUser = section.getOccupant();
-    if (!editingUser.equals(user)) {
-      return new Result(0, "The section is being edited by other");
-    }
+      User editingUser = section.getOccupant();
+      if (!editingUser.equals(user)) {
+        return new Result(0, "The section is being edited by other");
+      }
 
-    CommitParams commitParams = new CommitParams();
-    commitParams.setUser(user);
-    commitParams.setCommitEnum(CommitEnum.EDIT_END);
-    commitParams.setDocName(request.getDocName());
-    commitParams.setSectionNum(request.getSectionNum());
-    commitParams.setInputStream(request.getRemoteInputStream());
-    commitParams.setDocumentDatabase(documentDatabase);
-    commitParams.setChatManager(chatManager);
+      CommitParams commitParams = new CommitParams();
+      commitParams.setUser(user);
+      commitParams.setCommitEnum(CommitEnum.EDIT_END);
+      commitParams.setDocName(request.getDocName());
+      commitParams.setSectionNum(request.getSectionNum());
+      RemoteInputStream remoteInputStream = request.getRemoteInputStream();
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      InputStream inputStream = RemoteInputStreamClient.wrap(remoteInputStream);
+      org.apache.commons.io.IOUtils.copy(inputStream, baos);
+      byte[] bytes = baos.toByteArray();
+      commitParams.setBytes(bytes);
+      commitParams.setDocumentDatabase(documentDatabase);
+      commitParams.setChatManager(chatManager);
 
-    Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+      Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
-    if (result.getStatus() == 0) {
+      if (result.getStatus() == 0) {
+        return new Result(0, "Request aborted");
+      } else {
+        serverLogger.log(serverName, CommitEnum.EDIT_END + ": SUCCESS");
+        return new Result(1, "Succeed");
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
       return new Result(0, "Request aborted");
-    } else {
-      serverLogger.log(serverName, CommitEnum.EDIT_END + ": SUCCESS");
-      return new Result(1, "Succeed");
     }
+
   }
 
   @Override
@@ -900,15 +913,19 @@ public class Server implements ServerInterface {
                   getDocumentByName(commitParams.getDocName()).
                   getSectionByIndex(commitParams.getSectionNum());
           fileStream = editingSection.getWriteStream();
-          InputStream inputStream = RemoteInputStreamClient.wrap(commitParams.getInputStream());
-          fileStream.write(inputStream.read());
+          byte[] bytes = commitParams.getBytes();
+          String str = new String(bytes, StandardCharsets.UTF_8);
+          System.out.println("content: " + str);
+          fileStream.write(bytes);
         } catch (IOException e) {
+          e.printStackTrace();
           serverLogger.log(serverName, e.getMessage());
         }
         if (fileStream != null) {
           try {
             fileStream.close();
           } catch (IOException ex) {
+            ex.printStackTrace();
             serverLogger.log(serverName, ex.getMessage());
           }
         }
@@ -962,7 +979,8 @@ public class Server implements ServerInterface {
       CentralServerInterface stub = (CentralServerInterface) registry.lookup(CentralServer.class.getSimpleName() + centralPort);
       stub.receiveNotification(message);
     } catch (Exception e) {
-      serverLogger.log(serverName, "Exception: " + e.getMessage());
+      e.printStackTrace();
+//      serverLogger.log(serverName, "Exception: " + e.getMessage());
     }
   }
 
