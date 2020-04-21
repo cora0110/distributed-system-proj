@@ -656,20 +656,16 @@ public class Server implements ServerInterface {
         commitParams.getAliveUserDatabase().getOnlineUserRecord(username).setToken(null);
         break;
       // edit: set occupant of the section in documentDatabase
+      // cannot update db here because section path are different in different servers
       case EDIT:
         String docName = commitParams.getDocName();
-        int sectionNum = commitParams.getSectionNum();
-        commitParams.getDocumentDatabase().getDocumentByName(docName).
-                getSectionByIndex(sectionNum).occupy(commitParams.getUser());
         commitParams.getChatManager().getChatDatabase().put(docName, commitParams.getMulticastAddress());
         break;
       // edit end: write input stream into section path
       // set occupant to null in documentDatabase
+      // cannot update db here because section path are different in different servers
       case EDIT_END:
         docName = commitParams.getDocName();
-        sectionNum = commitParams.getSectionNum();
-        commitParams.getDocumentDatabase().getDocumentByName(docName).
-                getSectionByIndex(sectionNum).occupy(null);
         commitParams.getChatManager().getChatDatabase().remove(docName);
         break;
       // create document: create a new document in documentDatabase
@@ -893,7 +889,12 @@ public class Server implements ServerInterface {
         this.aliveUserDatabase = commitParams.getAliveUserDatabase();
         break;
       case EDIT:
-        this.documentDatabase = commitParams.getDocumentDatabase();
+        // set occupant
+        String docName = commitParams.getDocName();
+        int sectionNum = commitParams.getSectionNum();
+        this.documentDatabase.getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(commitParams.getUser());
+
         this.chatManager = commitParams.getChatManager();
         break;
       case SHARE:
@@ -907,6 +908,12 @@ public class Server implements ServerInterface {
                 commitParams.getUser());
         break;
       case EDIT_END:
+        // set occupant to null
+        docName = commitParams.getDocName();
+        sectionNum = commitParams.getSectionNum();
+        this.documentDatabase.getDocumentByName(docName).
+                getSectionByIndex(sectionNum).occupy(null);
+
         OutputStream fileStream = null;
         try {
           Section editingSection = documentDatabase.
