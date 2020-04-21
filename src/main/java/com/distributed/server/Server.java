@@ -641,6 +641,7 @@ public class Server implements ServerInterface {
   }
 
   CommitParams updateCommitParamsDatabase(CommitParams commitParams) {
+    // documentDB should not update in this step
     switch (commitParams.getCommitEnum()) {
       // create user: add new user to userDatabase
       case CREATE_USER:
@@ -675,8 +676,6 @@ public class Server implements ServerInterface {
         break;
       // share doc: add user to authors of a document in documentDatabase
       case SHARE:
-        commitParams.getDocumentDatabase().
-                getDocumentByName(commitParams.getDocName()).addAuthor(new User(commitParams.getTargetUser()));
         User sharedUser = commitParams.getUserDatabase().getUserByUsername(commitParams.getTargetUser());
         sharedUser.pushNewNotification(commitParams.getDocName());
         break;
@@ -894,11 +893,14 @@ public class Server implements ServerInterface {
         int sectionNum = commitParams.getSectionNum();
         this.documentDatabase.getDocumentByName(docName).
                 getSectionByIndex(sectionNum).occupy(commitParams.getUser());
-
+        System.out.println("ori path "+this.documentDatabase.getDocumentByName(docName).
+                getSectionByIndex(sectionNum).getPath());
         this.chatManager = commitParams.getChatManager();
         break;
       case SHARE:
-        this.documentDatabase = commitParams.getDocumentDatabase();
+        // add author
+        this.documentDatabase.getDocumentByName(commitParams.getDocName()).
+                addAuthor(new User(commitParams.getTargetUser()));
         this.userDatabase = commitParams.getUserDatabase();
         break;
       case CREATE_DOCUMENT:
@@ -919,10 +921,10 @@ public class Server implements ServerInterface {
           Section editingSection = documentDatabase.
                   getDocumentByName(commitParams.getDocName()).
                   getSectionByIndex(commitParams.getSectionNum());
-//          System.out.println("ori path "+editingSection.getPath());
+          System.out.println("ori path "+editingSection.getPath());
           String targetPath = editingSection.getPathByPort(currPort);
-//          System.out.println("path "+targetPath);
-          fileStream = this.getWriteStream(targetPath);
+          System.out.println("path "+targetPath);
+          fileStream = this.getWriteStream(editingSection.getPath());
 
           byte[] bytes = commitParams.getBytes();
           String str = new String(bytes, StandardCharsets.UTF_8);
