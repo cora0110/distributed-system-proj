@@ -288,6 +288,7 @@ public class Server implements ServerInterface {
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setInputStream(request.getRemoteInputStream());
     commitParams.setDocumentDatabase(documentDatabase);
+    commitParams.setChatManager(chatManager);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
