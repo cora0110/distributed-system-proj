@@ -5,6 +5,7 @@ import com.distributed.model.BackupData;
 import com.distributed.model.CommitEnum;
 import com.distributed.model.CommitParams;
 import com.distributed.model.Document;
+import com.distributed.model.RemoteInputStreamUtils;
 import com.distributed.model.Request;
 import com.distributed.model.Result;
 import com.distributed.model.Section;
@@ -15,7 +16,6 @@ import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
 import org.apache.commons.io.FileUtils;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -243,14 +243,14 @@ public class Server implements ServerInterface {
     }
 
     try {
-      InputStream inputStream = new FileInputStream(section.getPath());
-      SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
-      // assign multicast address
-//      long chatAddress = chatManager.getChatAddress(document);
+      FileChannel fileChannel = FileChannel.open(Paths.get(section.getPath()), StandardOpenOption.READ);
+      InputStream stream = Channels.newInputStream(fileChannel);
+      SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(stream);
+      result.setRemoteInputStream(remoteInputStream);
       serverLogger.log(serverName, CommitEnum.EDIT + ": SUCCESS");
       return new Result(1, String.valueOf(chatManager.getResultAddress(document.getName())), remoteInputStream);
-    } catch (IOException ioe) {
-      return new Result(0, "IO Exception while accessing the section");
+    } catch (Exception ioe) {
+      return new Result(0, "Exception while accessing the section");
     }
   }
 
@@ -290,11 +290,8 @@ public class Server implements ServerInterface {
       commitParams.setDocName(request.getDocName());
       commitParams.setSectionNum(request.getSectionNum());
       RemoteInputStream remoteInputStream = request.getRemoteInputStream();
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      InputStream inputStream = RemoteInputStreamClient.wrap(remoteInputStream);
-      org.apache.commons.io.IOUtils.copy(inputStream, baos);
-      byte[] bytes = baos.toByteArray();
-      commitParams.setBytes(bytes);
+      commitParams.setBytes(RemoteInputStreamUtils.toBytes(remoteInputStream));
+
       commitParams.setDocumentDatabase(documentDatabase);
       commitParams.setChatManager(chatManager);
 
@@ -312,6 +309,7 @@ public class Server implements ServerInterface {
     }
 
   }
+
 
   @Override
   public Result createDocument(User user, Request request) throws RemoteException {

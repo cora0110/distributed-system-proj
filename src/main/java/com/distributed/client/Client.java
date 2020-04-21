@@ -3,6 +3,7 @@ package com.distributed.client;
 import com.distributed.chat.Receiver;
 import com.distributed.chat.Sender;
 import com.distributed.model.Message;
+import com.distributed.model.RemoteInputStreamUtils;
 import com.distributed.model.Request;
 import com.distributed.model.Result;
 import com.distributed.model.User;
@@ -371,8 +372,7 @@ public class Client {
           System.err.println(result.getMessage());
           return;
         }
-        InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
-        fileStream.write(inputStream.read());
+        fileStream.write(RemoteInputStreamUtils.toBytes(result.getRemoteInputStream()));
 
         session.setOccupiedFilePath(filepath);
         session.setOccupiedFileName(docName);
@@ -384,7 +384,9 @@ public class Client {
           ex.printStackTrace();
         }
       } catch (IOException ex) {
-        printException(ex);
+        ex.printStackTrace();
+      } catch (Exception e) {
+        e.printStackTrace();
       }
     } else System.err.println("You're not logged in");
   }
