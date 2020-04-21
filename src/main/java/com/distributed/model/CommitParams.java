@@ -16,6 +16,7 @@ public class CommitParams implements Serializable {
   private String docName;
   private int sectionNum;
   private String targetUser;
+  private long multicastAddress;
 
   // 0: userDB, 1:aliveUserDB, 2:docDB
 //  private int DBCode;
@@ -109,4 +110,11 @@ public class CommitParams implements Serializable {
     this.targetUser = targetUser;
   }
 
+  public long getMulticastAddress() {
+    return multicastAddress;
+  }
+
+  public void setMulticastAddress(long multicastAddress) {
+    this.multicastAddress = multicastAddress;
+  }
 }

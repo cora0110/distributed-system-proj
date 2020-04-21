@@ -4,7 +4,6 @@ import com.healthmarketscience.rmiio.RemoteInputStream;
 
 import java.io.Serializable;
 
-//TODO
 public class Request implements Serializable {
   private String docName;
   private int sectionNum;

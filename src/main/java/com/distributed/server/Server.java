@@ -129,13 +129,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public Result createUser(User user) throws RemoteException {
     String username = user.getUsername();
     if (userDatabase.isUsernameAvailable(username)) {
-      // TODO: 4/17/20
       CommitParams commitParams = new CommitParams();
       commitParams.setUser(user);
       commitParams.setCommitEnum(CommitEnum.CREATE_USER);
       commitParams.setSectionNum(-1);
-      // TODO: 4/19/20
-//      UserDatabase cloneUserDB = SerializationUtils.clone(userDatabase);
       commitParams.setUserDatabase(userDatabase);
 
       Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
@@ -156,14 +153,12 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       // check username and password
       User loggedInUser = userDatabase.doLogin(user.getUsername(), user.getPassword());
       if (loggedInUser != null) {
-        // TODO: 4/17/20
         CommitParams commitParams = new CommitParams();
         commitParams.setUser(user);
         commitParams.setCommitEnum(CommitEnum.LOGIN);
         commitParams.setSectionNum(-1);
         commitParams.setAliveUserDatabase(aliveUserDatabase);
 
-        // TODO: 2PC AND RETURN TOKEN
         Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
         if (result.getStatus() == 0) {
           return new Result(0, "Request aborted.");
@@ -185,12 +180,10 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
 
   @Override
   public Result logout(User user) throws RemoteException {
-    // TODO: ANY NEED TO DO 2PC?
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.LOGOUT);
     commitParams.setSectionNum(-1);
-    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setAliveUserDatabase(aliveUserDatabase);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
@@ -238,8 +231,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.EDIT);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
-    // TODO: 4/19/20 should be an updated temporary param
     commitParams.setDocumentDatabase(documentDatabase);
+    long nextAvailableAddress = chatManager.getNextAvailableAddress();
+    commitParams.setMulticastAddress(nextAvailableAddress);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
 
     if (result.getStatus() == 0) {
@@ -250,9 +244,9 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       InputStream inputStream = new FileInputStream(section.getPath());
       SimpleRemoteInputStream remoteInputStream = new SimpleRemoteInputStream(inputStream);
       // assign multicast address
-      long chatAddress = chatManager.getChatAddress(document);
+//      long chatAddress = chatManager.getChatAddress(document);
       serverLogger.log(serverName, CommitEnum.EDIT + ": SUCCESS");
-      return new Result(1, String.valueOf(chatAddress), remoteInputStream);
+      return new Result(1, String.valueOf(chatManager.getResultAddress(document.getName())), remoteInputStream);
     } catch (IOException ioe) {
       return new Result(0, "IO Exception while accessing the section");
     }
@@ -293,7 +287,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setInputStream(request.getRemoteInputStream());
-    // TODO: 4/19/20 should be an updated temporary param, process stream.
     commitParams.setDocumentDatabase(documentDatabase);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
@@ -326,8 +319,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
-    // TODO: 4/19/20 should be an updated temporary param
-    //commitParams.setDocumentDatabase(documentDatabase);
 
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
     if (result.getStatus() == 1) {
@@ -486,7 +477,6 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
   public void kill() throws RemoteException {
     Registry registry = LocateRegistry.getRegistry(this.currPort);
     try {
-      // TODO: 4/17/20 add store database. shutdown hook
       registry.unbind(this.serverName);
     } catch (NotBoundException e) {
       e.printStackTrace();
@@ -645,6 +635,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         int sectionNum = commitParams.getSectionNum();
         commitParams.getDocumentDatabase().getDocumentByName(docName).
                 getSectionByIndex(sectionNum).occupy(commitParams.getUser());
+        commitParams.getChatManager().getChatDatabase().put(docName, commitParams.getMulticastAddress());
         break;
       // edit end: write input stream into section path
       // set occupant to null in documentDatabase
@@ -653,6 +644,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         sectionNum = commitParams.getSectionNum();
         commitParams.getDocumentDatabase().getDocumentByName(docName).
                 getSectionByIndex(sectionNum).occupy(null);
+        commitParams.getChatManager().getChatDatabase().remove(docName);
         break;
       // create document: create a new document in documentDatabase
       case CREATE_DOCUMENT:
@@ -870,8 +862,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         break;
       case EDIT:
         this.documentDatabase = commitParams.getDocumentDatabase();
-//      case CREATE_DOCUMENT:
-//        this.documentDatabase = commitParams.getDocumentDatabase();
+        this.chatManager = commitParams.getChatManager();
         break;
       case SHARE:
         this.documentDatabase = commitParams.getDocumentDatabase();
@@ -901,6 +892,11 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
           } catch (IOException ex) {
             serverLogger.log(serverName, ex.getMessage());
           }
+        }
+
+        Document doc = documentDatabase.getDocumentByName(commitParams.getDocName());
+        if (doc.getOccupiedSections().size() == 0) {
+          chatManager = commitParams.getChatManager();
         }
         break;
     }

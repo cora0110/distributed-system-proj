@@ -14,13 +14,12 @@ import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
@@ -34,9 +33,9 @@ import java.util.Scanner;
 
 public class Client {
 
-  public static int UDP_PORT = 1338;
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
   private static int CENTRAL_SERVER_RMI_PORT = 1200;
+  public static int UDP_PORT = 4567;
   private static String DATA_DIR;
   private String clientName;
   private ServerInterface serverInterface;
@@ -65,26 +64,12 @@ public class Client {
     if (!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
   }
 
-
-//  /**
-//   * Checks if the JSON configuration file exists and the path is a valid one.
-//   *
-//   * @param filePath file path
-//   * @return true if the the file exists and is a valid file, false otherwise
-//   */
-//  private boolean checkConfigFile(String filePath) {
-//    File configFile = new File(filePath);
-//    return configFile.isFile() && configFile.exists();
-//  }
-
   /**
    * Program Entry Point.
-   *
-   * @param args command arguments
    */
   public static void main(String[] args) {
     if (args.length != 1) {
-      System.out.println("Please specify a com.distributed.client name!");
+      System.out.println("Please specify a client name!");
       return;
     }
 
@@ -99,38 +84,25 @@ public class Client {
     } finally {
       try {
         client.notiClientRunnable.stop();
-        client.messageReceiver.leave();
       } catch (Exception ignore) {
       }
     }
   }
 
   /**
-   * Tries to connect to the {@code Server} running instance, create references to the streams for
-   * {@code Socket} I/O operations and starts the {@code NotificationClientThread}.
-   * <p>
-   * This method needs to be called after {@code setup} method execution.
-   *
-   * @throws IOException if I/O errors occur
-   * @see DataInputStream
-   * @see DataOutputStream
+   * Connect to a server, create references to the streams and starts the NotificationClientThread.
    */
   private void connect() throws Exception {
-    Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-    CentralServerInterface centralServer = (CentralServerInterface) centralRegistry.lookup(CentralServer.class.getSimpleName() + CENTRAL_SERVER_RMI_PORT);
-    int port = centralServer.assignAliveServerToClient();
-    Registry registry = LocateRegistry.getRegistry(port);
-    serverInterface = (ServerInterface) registry.lookup(Server.class.getSimpleName() + port);
-    System.out.println("Assigned to " + port);
-    notiClientRunnable = new NotiClientRunnable(serverInterface);
-    messageSender = new Sender();
+    serverInterface = this.retrieveServer();
+    notiClientRunnable = new NotiClientRunnable(this.serverInterface);
+    messageSender = Sender.create();
     Thread thread = new Thread(messageReceiver);
     thread.start();
     if (messageSender == null) throw new IOException();
   }
 
   /**
-   * Prints out and help message that sums up the {@code Client} commands list.
+   * Print help message.
    */
   private void printCommandsHelp() {
     String message =
@@ -153,11 +125,7 @@ public class Client {
   }
 
   /**
-   * Manages the commands dispatching loop that iterates over the {@code String} given to the
-   * prompt, interprets the corresponding command and executes the respective action.
-   *
-   * @throws NotBoundException if a RMI registration error occurs
-   * @throws IOException       if a registration I/O error occurs
+   * Loop for input commands, interprets and executes the command.
    */
   private void commandDispatchingLoop() throws NotBoundException, IOException {
     String command = null;
@@ -190,7 +158,6 @@ public class Client {
               if (args.length > 2) {
                 String username = args[1];
                 String password = args[2];
-                // TODO: 4/17/20
                 login(username, password);
               } else throw new IllegalArgumentException();
               break;
@@ -285,21 +252,22 @@ public class Client {
   }
 
   /**
-   * Retrieve an available com.distributed.server from central com.distributed.server.
+   * Retrieve an available server from central com.distributed.server.
    *
-   * @return assigned com.distributed.server
+   * @return assigned server
    */
   private ServerInterface retrieveServer() {
     try {
       Registry centralRegistry = LocateRegistry.getRegistry(CENTRAL_SERVER_HOST, CENTRAL_SERVER_RMI_PORT);
-      CentralServerInterface central = (CentralServerInterface) centralRegistry.lookup(CentralServerInterface.class.getSimpleName());
+      CentralServerInterface central = (CentralServerInterface) centralRegistry.lookup(CentralServer.class.getSimpleName() + CENTRAL_SERVER_RMI_PORT);
       int serverPort = central.assignAliveServerToClient();
+      System.out.println("Assigned to " + serverPort);
 
       Registry registry = LocateRegistry.getRegistry(serverPort);
-      ServerInterface serverInterface = (ServerInterface) registry.lookup(ServerInterface.class.getSimpleName());
+      ServerInterface serverInterface = (ServerInterface) registry.lookup(Server.class.getSimpleName() + serverPort);
       return serverInterface;
     } catch (Exception e) {
-      throw new RuntimeException("Unable to retrieve com.distributed.server.");
+      throw new RuntimeException("Unable to retrieve server");
     }
   }
 
@@ -316,16 +284,6 @@ public class Client {
     }
   }
 
-  /**
-   * Authenticates the user into system trying to validate the user's password and informs the
-   * com.distributed.server about its notification's port used by its {@code
-   * NotificationClientThread}.
-   * <p>
-   * It starts a new {@code LocalSession} object that collects all the session's information.
-   *
-   * @param username user username
-   * @param password user password
-   */
   private void login(String username, String password) throws Exception {
     if (session == null) {
       Result result = serverInterface.login(new User(username, password));
@@ -345,7 +303,7 @@ public class Client {
   }
 
   /**
-   * Kills session, stops the {@code NotificationClientThread} and clears the notifications' list.
+   * Kill session, stop NotificationClientThread and clears notifications.
    */
   private void logout() throws Exception {
     if (session != null) {
@@ -360,7 +318,7 @@ public class Client {
         notiClientRunnable.setUser(null);
         notiClientRunnable.stop();
         System.out.println("Successfully logged out.");
-      } else System.err.println("You should 'stopedit' before logging out");
+      } else System.err.println("You should 'endedit' before logging out");
     } else System.err.println("You're not logged in");
   }
 
@@ -387,9 +345,8 @@ public class Client {
   }
 
   /**
-   * Starts an edit session for a specific {@code Document}'s {@code Section}.
-   * <p>
-   * Initializes a new multicast group for a {@code MessageReceiver} object too.
+   * Start an edit session for a document. Retrieve file stream from server and write in on local
+   * file. Initialize a new multicast group for a {@code MessageReceiver}.
    *
    * @param docName        document filename
    * @param secNumber      section index
@@ -429,8 +386,7 @@ public class Client {
   }
 
   /**
-   * Stops a {@code Document}'s {@code Section} editing and imposes the {@code MessageReceiver} to
-   * leave the actual multicast group.
+   * Stops editing the current section and leave multicast group.
    */
   private void editEnd() {
     if (session != null) {
@@ -447,7 +403,7 @@ public class Client {
           session.setOccupiedFilePath(null);
           session.setOccupiedFileName(null);
           session.setSectionIndex(0);
-          messageReceiver.leave();
+          messageReceiver.setNewGroup(0);
         } catch (Exception ex) {
           printException(ex);
         }
@@ -456,15 +412,7 @@ public class Client {
   }
 
   /**
-   * Reads the content of the requested {@code Section} and, if somebody is editing it, returns the
-   * editor's name.
-   * <p>
-   * If the {@code chosenFilename} is null, the default name is used: {@code docName}_{@code
-   * secNumber}.
-   *
-   * @param docName        document's name
-   * @param secNumber      target section
-   * @param chosenFilename output filename or null
+   * Read content of requested section.
    */
   private void showSection(String docName, int secNumber, String chosenFilename) {
     if (session != null) {
@@ -492,7 +440,7 @@ public class Client {
   }
 
   /**
-   * Gets the list of {@code Document}s on which the {@code User} has permissions.
+   * Gets the list of documents the user has permissions.
    */
   private void documentsList() throws Exception {
     if (session != null) {
@@ -504,12 +452,8 @@ public class Client {
   }
 
   /**
-   * Shares a document with another {@code User}, giving him the permission to modify and see it.
-   * <p>
-   * When a {@code User} receives new permissions, a notification will be delivered to him.
-   *
-   * @param user    user's username
-   * @param docName document's name
+   * Shares a document and read/write permission with another user. The shared user will also
+   * receive a notification.
    */
   private void share(String user, String docName) throws Exception {
     Request request = new Request();
@@ -520,12 +464,7 @@ public class Client {
   }
 
   /**
-   * Gets the entire requested {@code Document} concatenating all its {@code Section}s together.
-   * <p>
-   * If the {@code outputName} is null, the {@code docName} value is used.
-   *
-   * @param docName    document's name
-   * @param outputName output filename
+   * Read the requested document and concatenate all its sections.
    */
   private void showDocument(String docName, String outputName) {
     if (session != null) {
@@ -550,7 +489,7 @@ public class Client {
 
 
   /**
-   * Prints out all the notifications collected since the last method invocation.
+   * Print all new notifications collected since the last printing.
    */
   private void printNews() {
     if (session != null) {
@@ -562,7 +501,7 @@ public class Client {
   }
 
   /**
-   * Shows all the received {@code ChatMessage}s received since the last method invocation.
+   * Shows all new received messages.
    */
   private void showMessages() {
     if (session != null) {
@@ -575,19 +514,16 @@ public class Client {
   }
 
   /**
-   * Sends a new {@code ChatMessage} UDP multicast packet to every listening {@code
-   * MessageReceiver}.
-   *
-   * @param text message text
+   * Send a new UDP multicast packet to every listening receiver
    */
   private void sendMessage(String text) {
     if (session != null) {
       if (session.isEditing()) {
         InetAddress groupAddress;
-        if ((groupAddress = messageReceiver.getGroup()) != null) {
+        if ((groupAddress = messageReceiver.getActiveGroup()) != null) {
           try {
             Message message = new Message(session.getUser().getUsername(), text, System.currentTimeMillis());
-            messageSender.sendMessage(message, groupAddress);
+            messageSender.sendMessage(message, new InetSocketAddress(groupAddress, UDP_PORT));
           } catch (Exception ex) {
             printException(ex);
           }
@@ -597,9 +533,7 @@ public class Client {
   }
 
   /**
-   * Prints out a generic {@code Exception} in a friendly format.
-   *
-   * @param ex
+   * Print easy to read exception.
    */
   private void printException(Exception ex) {
     System.err.println(ex.getMessage());

@@ -6,7 +6,6 @@ import com.healthmarketscience.rmiio.RemoteOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
-//TODO
 public class Result implements Serializable {
   List<String> unreadNotifications;
   private int status;

@@ -10,7 +10,7 @@ public class LocalSession {
   private int sectionIndex;
 
   /**
-   * Initializes with token and username.
+   * Initialize with token and username.
    */
   LocalSession(String sessionToken, User user) {
     this.sessionToken = sessionToken;

@@ -1,65 +1,93 @@
 package com.distributed.chat;
 
+import com.distributed.client.Client;
 import com.distributed.model.Message;
 
-import java.net.DatagramPacket;
+import java.io.IOException;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.StandardProtocolFamily;
+import java.net.StandardSocketOptions;
+import java.net.UnknownHostException;
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.MembershipKey;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class Receiver implements Runnable {
 
   private List<Message> messages;
-  private MulticastSocket socket;
-  private byte[] buffer;
-  private boolean isAlive;
-  private InetAddress group;
+  private MembershipKey activeGroup;
+  private DatagramChannel channel;
+  private NetworkInterface interf;
 
-  public Receiver() throws Exception {
-    this.messages = new ArrayList<>();
-    this.buffer = new byte[2048];
-    this.isAlive = true;
-    this.socket = new MulticastSocket(4567);
+  public Receiver() {
+    messages = new ArrayList<>();
+    activeGroup = null;
+    channel = null;
+    interf = null;
   }
 
   @Override
   public void run() {
-    while (isAlive) {
-      if (group != null) {
-        try {
-//        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address);
-//        socket.receive(packet);
-//        String received = new String(packet.getData(), 0, packet.getLength());
-//        Message message = new Message(received);
-//        messages.add(message);
+    try {
+      Selector selector = Selector.open();
+      channel = DatagramChannel.open(StandardProtocolFamily.INET);
+      interf = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+      channel.setOption(StandardSocketOptions.IP_MULTICAST_IF, interf);
+      channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+      channel.bind(new InetSocketAddress(Client.UDP_PORT));
+      channel.configureBlocking(false);
+      channel.register(selector, SelectionKey.OP_READ);
+      ByteBuffer buffer = ByteBuffer.allocate(2048);
+      while (!Thread.currentThread().isInterrupted()) {
+        selector.select();
+        Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+        while (iterator.hasNext()) {
+          SelectionKey key = iterator.next();
+          iterator.remove();
+          if (key.isReadable()) {
+            buffer.clear();
+            InetSocketAddress sa = (InetSocketAddress) channel.receive(buffer);
+            if (sa != null) {
+              buffer.flip();
+              try {
+                String sender = getString(buffer);
+                String content = getString(buffer);
+                long timestamp = buffer.getLong();
 
-
-          socket.joinGroup(group);
-          DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-          socket.receive(packet);
-          String received = new String(
-                  packet.getData(), 0, packet.getLength());
-          Message message = new Message(received);
-          messages.add(message);
-        } catch (Exception e) {
-          e.printStackTrace();
-          System.out.println("Unable receiving messages.");
+                Message message = new Message(sender, content, timestamp);
+                synchronized (messages) {
+                  messages.add(message);
+                }
+              } catch (BufferUnderflowException ignore) {
+              }
+            }
+          }
         }
       }
-      try {
-        Thread.sleep(3000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+    } catch (IOException ex) {
+      System.out.println(ex.getMessage());
+    } finally {
+      if (channel != null)
+        try {
+          channel.close();
+        } catch (IOException ignore) {
+        }
     }
   }
 
-  public void setNewGroup(long address) throws Exception {
-    if (socket != null) {
-      group = ChatManager.longToAddress(address);
-      this.socket.joinGroup(group);
-    }
+  private String getString(ByteBuffer buffer) {
+    int size = buffer.getInt();
+    byte[] res = new byte[size];
+    buffer.get(res, 0, size);
+    return new String(res);
   }
 
   public List<Message> retrieve() {
@@ -68,50 +96,27 @@ public class Receiver implements Runnable {
     return current;
   }
 
-  public void leave() throws Exception {
-    this.socket.leaveGroup(group);
-    this.isAlive = false;
+  /**
+   * Setting a group represented by the IPv4 address to receive messages
+   */
+  public void setNewGroup(long group) throws IOException, UnknownHostException {
+    if (channel != null) {
+      if (group > 0) {
+        byte[] rawAddress = ChatManager.longToAddress(group).getAddress();
+        if (activeGroup != null && activeGroup.isValid()) activeGroup.drop();
+        activeGroup = channel.join(InetAddress.getByAddress(rawAddress), interf);
+      } else {
+        activeGroup.drop();
+        activeGroup = null;
+      }
+    }
   }
 
-  public List<Message> getMessages() {
-    return this.messages;
+  /**
+   * Get the active group.
+   */
+  public InetAddress getActiveGroup() {
+    return activeGroup.group();
   }
-
-  public void setMessages(List<Message> messages) {
-    this.messages = messages;
-  }
-
-  public MulticastSocket getSocket() {
-    return this.socket;
-  }
-
-  public void setSocket(MulticastSocket socket) {
-    this.socket = socket;
-  }
-
-  public byte[] getBuffer() {
-    return this.buffer;
-  }
-
-  public void setBuffer(byte[] buffer) {
-    this.buffer = buffer;
-  }
-
-  public boolean isAlive() {
-    return this.isAlive;
-  }
-
-  public void setAlive(boolean isAlive) {
-    this.isAlive = isAlive;
-  }
-
-  public InetAddress getGroup() {
-    return group;
-  }
-
-  public void setGroup(InetAddress group) {
-    this.group = group;
-  }
-
 
 }

@@ -41,27 +41,29 @@ public class NotiClientRunnable implements Runnable {
   }
 
   /**
-   * Gets all the notifications received since the last method invocation.
-   *
-   * @return the notification strings array
+   * Get all new notifications received.
    */
   public List<String> getAllNotifications() {
     List<String> res = new ArrayList<>();
-    synchronized (notifications) {
-      if (!notifications.isEmpty()) {
-        res.addAll(notifications);
-        notifications.clear();
+    if (null != notifications) {
+      synchronized (notifications) {
+        if (!notifications.isEmpty()) {
+          res.addAll(notifications);
+          notifications.clear();
+        }
       }
     }
     return res;
   }
 
   /**
-   * Clears the notifications.
+   * Clear notifications.
    */
   public void clearNotificationList() {
-    synchronized (notifications) {
-      notifications.clear();
+    if (null != notifications) {
+      synchronized (notifications) {
+        notifications.clear();
+      }
     }
   }
 

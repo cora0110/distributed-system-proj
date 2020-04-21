@@ -48,7 +48,6 @@ public interface ServerInterface extends Remote {
 
   Result listOwnedDocs(User user, Request request) throws RemoteException;
 
-  // TODO: Since we are unfamiliar with the notification mechanism, please feel free to change/add the signatures
   Result shareDoc(User user, Request request) throws RemoteException;
 
   Result getNotifications(User user) throws RemoteException;
