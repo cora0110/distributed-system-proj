@@ -11,7 +11,6 @@ import com.distributed.server.CentralServer;
 import com.distributed.server.CentralServerInterface;
 import com.distributed.server.Server;
 import com.distributed.server.ServerInterface;
-import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.RemoteInputStreamServer;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
@@ -77,7 +76,7 @@ public class Client {
     }
 
     System.setProperty("java.net.preferIPv4Stack", "true");
-    Logger rmiioLogger = Logger.getLogger( "com.healthmarketscience.rmiio" );
+    Logger rmiioLogger = Logger.getLogger("com.healthmarketscience.rmiio");
     rmiioLogger.setLevel(Level.SEVERE);
     String clientName = args[0];
     Client client = new Client(clientName);
@@ -426,28 +425,32 @@ public class Client {
    * Read content of requested section.
    */
   private void showSection(String docName, int secNumber, String chosenFilename) {
-    if (session != null) {
-      String filename = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
-      try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-           OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        Request request = new Request();
-        request.setDocName(docName);
-        request.setSectionNum(secNumber);
-        request.setToken(session.getSessionToken());
-        Result result = serverInterface.showSection(new User(session.getUser().getUsername()), request);
-        InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
-        String editor = result.getMessage();
-        fileStream.write(inputStream.read());
-        if (result.getStatus() == 1) {
-          if (!editor.equals("None")) {
-            System.out.println(String.format("%s is editing the section right now", editor));
-          } else System.out.println("None is editing this section");
+    try {
+      if (session != null) {
+        String filename = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
+        try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+          Request request = new Request();
+          request.setDocName(docName);
+          request.setSectionNum(secNumber);
+          request.setToken(session.getSessionToken());
+          Result result = serverInterface.showSection(new User(session.getUser().getUsername()), request);
+          byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
+          fileStream.write(bytes);
+//          if (result.getStatus() == 1) {
+//            if (!editor.equals("None")) {
+//              System.out.println(String.format("%s is editing the section right now", editor));
+//            } else System.out.println("None is editing this section");
+//          }
+        } catch (IOException ex) {
+          ex.printStackTrace();
+          printException(ex);
         }
-      } catch (IOException ex) {
-        ex.printStackTrace();
-        printException(ex);
-      }
-    } else System.err.println("You're not logged in");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
   }
 
   /**
@@ -478,24 +481,28 @@ public class Client {
    * Read the requested document and concatenate all its sections.
    */
   private void showDocument(String docName, String outputName) {
-    if (session != null) {
-      String filename = DATA_DIR + (outputName == null ? docName : outputName);
-      try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-           OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        Request request = new Request();
-        request.setDocName(docName);
-        request.setToken(session.getSessionToken());
-        Result result = serverInterface.showDocumentContent(new User(session.getUser().getUsername()), request);
-        InputStream inputStream = RemoteInputStreamClient.wrap(result.getRemoteInputStream());
-        String message = result.getMessage();
-        fileStream.write(inputStream.read());
-        if (!message.equals("None")) {
-          System.out.println(String.format("These are the on editing sections: %s", message));
-        } else System.out.println("None is editing this document");
-      } catch (IOException ex) {
-        printException(ex);
-      }
-    } else System.err.println("You're not logged in");
+    try {
+      if (session != null) {
+        String filename = DATA_DIR + (outputName == null ? docName : outputName);
+        try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+          Request request = new Request();
+          request.setDocName(docName);
+          request.setToken(session.getSessionToken());
+          Result result = serverInterface.showDocumentContent(new User(session.getUser().getUsername()), request);
+
+          byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
+          fileStream.write(bytes);
+//          if (!result.getMessage().equals("None")) {
+//            System.out.println(String.format("These are the on editing sections: %s", result.));
+//          } else System.out.println("None is editing this document");
+        } catch (IOException ex) {
+          printException(ex);
+        }
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
 
