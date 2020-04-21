@@ -42,7 +42,7 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class Server extends UnicastRemoteObject implements ServerInterface {
+public class Server implements ServerInterface {
   private final String DATA_DIR;
   private final String USER_DB_NAME = "UserDB.dat";
   private final String DOC_DB_NAME = "DocDB.dat";
@@ -75,14 +75,14 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     prepareResponseMap = new ConcurrentHashMap<>();
     commitResponseMap = new ConcurrentHashMap<>();
 
-    bindRMI();
+//    bindRMI();
 
     System.setProperty("java.net.preferIPv4Stack", "true");
     // store memory database when shutting down with shutdown hook
     userDatabase = initUserDB();
     documentDatabase = initDocumentDB();
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      System.out.println("Server is shutting down...");
+      System.out.println(serverName + " is shutting down...");
       storeUsersDB();
       storeDocumentsDB();
     }));
@@ -112,18 +112,18 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
   }
 
-  /**
-   * Binds RMI
-   */
-  public void bindRMI() {
-    try {
-      Registry registry = LocateRegistry.createRegistry(currPort);
-      registry.rebind(serverName, this);
-      serverLogger.log(serverName + " is running...");
-    } catch (Exception e) {
-      serverLogger.log(e.getMessage());
-    }
-  }
+//  /**
+//   * Binds RMI
+//   */
+//  public void bindRMI() {
+//    try {
+//      Registry registry = LocateRegistry.createRegistry(currPort);
+//      registry.rebind(serverName, this);
+//      serverLogger.log(serverName + " is running...");
+//    } catch (Exception e) {
+//      serverLogger.log(e.getMessage());
+//    }
+//  }
 
   @Override
   public Result createUser(User user) throws RemoteException {
@@ -473,15 +473,16 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     return result;
   }
 
-  @Override
-  public void kill() throws RemoteException {
-    Registry registry = LocateRegistry.getRegistry(this.currPort);
-    try {
-      registry.unbind(this.serverName);
-    } catch (NotBoundException e) {
-      e.printStackTrace();
-    }
-  }
+//  @Override
+//  public void kill() throws RemoteException {
+//    Registry registry = LocateRegistry.getRegistry(this.currPort);
+//    try {
+//      // TODO: 4/17/20 add store database. shutdown hook
+//      registry.unbind(this.serverName);
+//    } catch (NotBoundException e) {
+//      e.printStackTrace();
+//    }
+//  }
 
   @Override
   public boolean recoverData(BackupData backupData) {
@@ -546,7 +547,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
       return true;
     } catch (Exception e) {
       e.printStackTrace();
-      serverLogger.log("Failed Restart Server! Exception: " + e.getMessage());
+      serverLogger.log(serverName, e.getMessage());
     }
     return false;
   }
@@ -683,7 +684,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
         boolean prepareAck = stub.receivePrepare(transactionID, commitParams);
         prepareResponseMap.get(transactionID).put(peerPort, prepareAck);
       } catch (Exception e) {
-        serverLogger.log(serverName, "Exception: " + e.getMessage());
+        //serverLogger.log(serverName, "Exception: " + e.getMessage());
       }
     }
 
@@ -729,7 +730,7 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     }
 
     // if 0 abort ack && receive agree acks from more than half peers, commit, otherwise abort
-    return ackCount == agreeAckCount && ackCount >= (numOfPeers / 2 + 1);
+    return ackCount == agreeAckCount && ackCount >= (numOfPeers / 2);
   }
 
   @Override
@@ -756,13 +757,15 @@ public class Server extends UnicastRemoteObject implements ServerInterface {
     if (ack) {
       serverLogger.log(serverName, "Commit: sent");
       for (int peerPort : peers) {
-        try {
-          Registry registry = LocateRegistry.getRegistry(peerPort);
-          ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + peerPort);
-          boolean commitAck = stub.receiveCommit(transactionID);
-          commitResponseMap.get(transactionID).put(peerPort, commitAck);
-        } catch (Exception e) {
-          serverLogger.log(serverName, "Exception: " + e.getMessage());
+        if (prepareResponseMap.get(transactionID).get(peerPort) != null) {
+          try {
+            Registry registry = LocateRegistry.getRegistry(peerPort);
+            ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + peerPort);
+            boolean commitAck = stub.receiveCommit(transactionID);
+            commitResponseMap.get(transactionID).put(peerPort, commitAck);
+          } catch (Exception e) {
+            //serverLogger.log(serverName, "Exception: " + e.getMessage());
+          }
         }
       }
     } else {

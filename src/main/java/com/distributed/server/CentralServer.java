@@ -27,13 +27,17 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     serverLogger = new ServerLogger();
     bindRMI();
     for (int port : this.serverPorts) {
-      new Server(port, centralPort);
+      Server server = new Server(port, centralPort);
+      ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
+      Registry registry = LocateRegistry.createRegistry(port);
+      registry.rebind(Server.class.getSimpleName() + port, stub);
+      serverLogger.log("Server" + port + " is running...");
       this.serverStatus.put(port, 0);
     }
   }
 
   public static void main(String[] args) throws Exception {
-    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400, 1500});
+    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400, 1500, 1600, 1700});
   }
 
   /**
@@ -62,8 +66,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   public void killSlaveServer(int slaveServerPort) {
     try {
       Registry registry = LocateRegistry.getRegistry(slaveServerPort);
-      ServerInterface stub = (ServerInterface) registry.lookup("Server" + slaveServerPort);
-      stub.kill();
+      registry.unbind(Server.class.getSimpleName() + slaveServerPort);
       serverStatus.put(slaveServerPort, 2);
     } catch (Exception e) {
       e.printStackTrace();
@@ -73,20 +76,23 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
-    new Server(slaveServerPort, centralPort);
-    serverLogger.log(centralName, "restart " + slaveServerPort);
+    Server obj = new Server(slaveServerPort, centralPort);
+    Registry registry = LocateRegistry.getRegistry(slaveServerPort);
+    registry.rebind(Server.class.getSimpleName() + slaveServerPort, obj);
+
     for (int serverPort : serverPorts) {
       if (serverPort == slaveServerPort) continue;
       if (getServerStatus(serverPort) == 0) {
         try {
-          Registry registry = LocateRegistry.getRegistry(serverPort);
+          registry = LocateRegistry.getRegistry(serverPort);
           ServerInterface stub = (ServerInterface) registry.lookup("Server" + serverPort);
           stub.helpRecoverData(slaveServerPort);
           serverStatus.put(slaveServerPort, 0);
-          break;
+          return;
         } catch (Exception e) {
           e.printStackTrace();
           serverLogger.log(centralName, e.getMessage());
+          return;
         }
       }
     }
