@@ -232,6 +232,7 @@ public class Server implements ServerInterface {
     commitParams.setDocName(request.getDocName());
     commitParams.setSectionNum(request.getSectionNum());
     commitParams.setDocumentDatabase(documentDatabase);
+    commitParams.setChatManager(chatManager);
     long nextAvailableAddress = chatManager.getNextAvailableAddress();
     commitParams.setMulticastAddress(nextAvailableAddress);
     Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
