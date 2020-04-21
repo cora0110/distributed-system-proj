@@ -53,7 +53,7 @@ public interface ServerInterface extends Remote {
 
   Result getNotifications(User user) throws RemoteException;
 
-  void kill() throws RemoteException;
+//  void kill() throws RemoteException;
 
   boolean recoverData(BackupData backupData) throws RemoteException;
 

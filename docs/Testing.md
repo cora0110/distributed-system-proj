@@ -61,3 +61,15 @@ Client Command:
 
 - send TEXT: to send the TEXT message regarding the document being edited
 
+
+
+Consistency test
+
+- 5 replicas, register in client1, then:
+  - register in client2 -> Username already exists
+  - login in client2 -> Logged in successfully
+
+- Kill one server -> commit
+- kill two servers -> commit
+- kill >= three serverss -> abort
+
