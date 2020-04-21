@@ -28,8 +28,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     bindRMI();
     for (int port : this.serverPorts) {
       Server server = new Server(port, centralPort);
+      ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
       Registry registry = LocateRegistry.createRegistry(port);
-      registry.rebind(Server.class.getSimpleName() + currPort, server);
+      registry.rebind(Server.class.getSimpleName() + port, stub);
       serverLogger.log("Server" + port + " is running...");
       this.serverStatus.put(port, 0);
     }
@@ -65,7 +66,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   public void killSlaveServer(int slaveServerPort) {
     try {
       Registry registry = LocateRegistry.getRegistry(slaveServerPort);
-      registry.unbind(Server.class.getSimpleName() + "slaveServerPort");
+      registry.unbind(Server.class.getSimpleName() + slaveServerPort);
       serverStatus.put(slaveServerPort, 2);
     } catch (Exception e) {
       e.printStackTrace();

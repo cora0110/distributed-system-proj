@@ -42,7 +42,7 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class Server extends UnicastRemoteObject implements ServerInterface {
+public class Server implements ServerInterface {
   private final String DATA_DIR;
   private final String USER_DB_NAME = "UserDB.dat";
   private final String DOC_DB_NAME = "DocDB.dat";
