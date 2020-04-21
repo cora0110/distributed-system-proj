@@ -29,11 +29,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -464,14 +463,24 @@ public class Server implements ServerInterface {
 
   @Override
   public Result getNotifications(User user) throws RemoteException {
+    Result ret = new Result();
     User userDB = userDatabase.getUserByUsername(user.getUsername());
-    List<String> unreadNotifications = null;
-    if (userDB != null) {
-      unreadNotifications = userDB.getUnreadNotifications();
+    List<String> curNoti = userDB.getNotifications();
+    if (curNoti.size() != 0) {
+      CommitParams commitParams = new CommitParams();
+      commitParams.setUser(user);
+      commitParams.setCommitEnum(CommitEnum.GET_NOTIFICATIONS);
+      commitParams.setUserDatabase(userDatabase);
+      ret.setUnreadNotifications(new ArrayList<>(curNoti));
+      Result result = twoPhaseCommit(UUID.randomUUID(), commitParams);
+
+      if (result.getStatus() == 0) {
+        ret.setUnreadNotifications(new ArrayList<>());
+      }
+    } else {
+      ret.setUnreadNotifications(new ArrayList<>());
     }
-    Result result = new Result();
-    result.setUnreadNotifications(unreadNotifications);
-    return result;
+    return ret;
   }
 
 //  @Override
@@ -659,6 +668,10 @@ public class Server implements ServerInterface {
                 getDocumentByName(commitParams.getDocName()).addAuthor(new User(commitParams.getTargetUser()));
         User sharedUser = commitParams.getUserDatabase().getUserByUsername(commitParams.getTargetUser());
         sharedUser.pushNewNotification(commitParams.getDocName());
+        break;
+      case GET_NOTIFICATIONS:
+        commitParams.getUserDatabase().getUserByUsername(commitParams.getUser().getUsername())
+                .getNotifications().clear();
         break;
     }
     return commitParams;
@@ -902,6 +915,9 @@ public class Server implements ServerInterface {
         if (doc.getOccupiedSections().size() == 0) {
           chatManager = commitParams.getChatManager();
         }
+        break;
+      case GET_NOTIFICATIONS:
+        userDatabase = commitParams.getUserDatabase();
         break;
     }
   }

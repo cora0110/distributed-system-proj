@@ -16,6 +16,7 @@ public enum CommitEnum {
   CREATE_USER,
   SHOW_SECTION,
   SHOW_DOC_CONTENT,
+  GET_NOTIFICATIONS,
   LIST,
   ;
 }
