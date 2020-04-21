@@ -7,6 +7,8 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CentralServer extends UnicastRemoteObject implements CentralServerInterface {
   private String host;
@@ -37,6 +39,8 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   }
 
   public static void main(String[] args) throws Exception {
+    Logger rmiioLogger = Logger.getLogger( "com.healthmarketscience.rmiio" );
+    rmiioLogger.setLevel(Level.SEVERE);
     CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400, 1500, 1600, 1700});
   }
 

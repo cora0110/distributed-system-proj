@@ -30,6 +30,8 @@ import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Client {
 
@@ -74,6 +76,8 @@ public class Client {
     }
 
     System.setProperty("java.net.preferIPv4Stack", "true");
+    Logger rmiioLogger = Logger.getLogger( "com.healthmarketscience.rmiio" );
+    rmiioLogger.setLevel(Level.SEVERE);
     String clientName = args[0];
     Client client = new Client(clientName);
     try {
