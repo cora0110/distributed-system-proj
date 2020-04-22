@@ -24,7 +24,6 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Arrays;
@@ -35,8 +34,9 @@ import java.util.logging.Logger;
 
 /**
  * Client.java
- *
+ * <p>
  * Implements a client class and methods.
+ *
  * @version 2020-4-21
  */
 public class Client {
@@ -55,6 +55,7 @@ public class Client {
 
   /**
    * constructor
+   *
    * @param clientName
    */
   public Client(String clientName) {
@@ -63,6 +64,10 @@ public class Client {
       DATA_DIR = "./client_data_" + clientName + "/";
       messageReceiver = new Receiver();
       checkDataDirectory();
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println(clientName + " is shutting down...");
+        notiClientRunnable.stop();
+      }));
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -94,7 +99,7 @@ public class Client {
       client.connect();
       client.commandDispatchingLoop();
     } catch (Exception ex) {
-      client.printException(ex);
+      System.err.println(ex);
     } finally {
       try {
         client.notiClientRunnable.stop();
@@ -141,7 +146,7 @@ public class Client {
   /**
    * Loop for input commands, interprets and executes the command.
    */
-  private void commandDispatchingLoop(){
+  private void commandDispatchingLoop() {
     String command = null;
     Scanner input = new Scanner(System.in);
     boolean isAlive = true;
@@ -290,35 +295,46 @@ public class Client {
    * Register a new user.
    */
   private void register(String username, String password) throws Exception {
-    Result result = serverInterface.createUser(new User(username, password));
-    if (result.getStatus() == 1) {
-      System.out.println("User " + username + " registered successfully!");
-    } else {
-      System.err.println(result.getMessage());
+    try {
+      Result result = serverInterface.createUser(new User(username, password));
+      if (result.getStatus() == 1) {
+        System.out.println("User " + username + " registered successfully!");
+      } else {
+        System.err.println(result.getMessage());
+      }
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
     }
   }
 
   /**
    * user login
+   *
    * @param username
    * @param password
    * @throws Exception
    */
   private void login(String username, String password) throws Exception {
-    if (session == null) {
-      Result result = serverInterface.login(new User(username, password));
-      if (result.getStatus() == 0) {
-        System.err.println(result.getMessage());
-        return;
+    try {
+      if (session == null) {
+        Result result = serverInterface.login(new User(username, password));
+        if (result.getStatus() == 0) {
+          System.err.println(result.getMessage());
+          return;
+        }
+        String token = result.getMessage();
+        user = new User(username);
+        notiClientRunnable.setUser(user);
+        new Thread(notiClientRunnable).start();
+        session = new LocalSession(token, user);
+        System.out.println("Logged in successfully as " + username);
+      } else {
+        System.err.println("You're already logged in.");
       }
-      String token = result.getMessage();
-      user = new User(username);
-      notiClientRunnable.setUser(user);
-      new Thread(notiClientRunnable).start();
-      session = new LocalSession(token, user);
-      System.out.println("Logged in successfully as " + username);
-    } else {
-      System.err.println("You're already logged in.");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
     }
   }
 
@@ -326,20 +342,24 @@ public class Client {
    * User logout. Kill session, stop NotificationClientThread and clears notifications.
    */
   private void logout() throws Exception {
-    if (session != null) {
-      if (!session.isEditing()) {
-        Result result = serverInterface.logout(new User(session.getUser().getUsername()));
-        if (result.getStatus() == 0) {
-          System.err.println(result.getMessage());
-          return;
-        }
-        session = null;
-        notiClientRunnable.clearNotificationList();
-        notiClientRunnable.setUser(null);
-        notiClientRunnable.stop();
-        System.out.println("Successfully logged out.");
-      } else System.err.println("You should 'endedit' before logging out");
-    } else System.err.println("You're not logged in");
+    try {
+      if (session != null) {
+        if (!session.isEditing()) {
+          Result result = serverInterface.logout(new User(session.getUser().getUsername()));
+          if (result.getStatus() == 0) {
+            System.err.println(result.getMessage());
+            return;
+          }
+          session = null;
+          notiClientRunnable.clearNotificationList();
+          notiClientRunnable.setUser(null);
+          System.out.println("Successfully logged out.");
+        } else System.err.println("You should 'endedit' before logging out");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -349,19 +369,24 @@ public class Client {
    * @param secNumber number of sections of the new document
    */
   private void create(String docName, int secNumber) throws Exception {
-    if (session != null) {
-      User user = new User(session.getUser().getUsername());
-      Request request = new Request();
-      request.setToken(session.getSessionToken());
-      request.setDocName(docName);
-      request.setSectionNum(secNumber);
-      Result result = serverInterface.createDocument(user, request);
-      if (result.getStatus() == 0) {
-        System.err.println(result.getMessage());
-        return;
-      }
-      System.out.println("Successfully create a new document.");
-    } else System.err.println("You're not logged in");
+    try {
+      if (session != null) {
+        User user = new User(session.getUser().getUsername());
+        Request request = new Request();
+        request.setToken(session.getSessionToken());
+        request.setDocName(docName);
+        request.setSectionNum(secNumber);
+        Result result = serverInterface.createDocument(user, request);
+        if (result.getStatus() == 0) {
+          System.err.println(result.getMessage());
+          return;
+        }
+        System.out.println("Successfully create a new document.");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -372,69 +397,73 @@ public class Client {
    * @param secNumber      section index
    * @param chosenFilename output filename
    */
-  private void edit(String docName, int secNumber, String chosenFilename) {
-    if (session != null) {
-      String filepath = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
-      try (FileChannel fileChannel = FileChannel.open(Paths.get(filepath), StandardOpenOption.CREATE,
-              StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-           OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
-        Request request = new Request();
-        request.setDocName(docName);
-        request.setSectionNum(secNumber);
-        request.setToken(session.getSessionToken());
-        Result result = serverInterface.edit(new User(session.getUser().getUsername()), request);
-        if (result.getStatus() == 0) {
-          System.err.println(result.getMessage());
-          return;
-        }
-        fileStream.write(RemoteInputStreamUtils.toBytes(result.getRemoteInputStream()));
+  private void edit(String docName, int secNumber, String chosenFilename) throws Exception {
+    try {
+      if (session != null) {
+        String filepath = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
+        try (FileChannel fileChannel = FileChannel.open(Paths.get(filepath), StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+          Request request = new Request();
+          request.setDocName(docName);
+          request.setSectionNum(secNumber);
+          request.setToken(session.getSessionToken());
+          Result result = serverInterface.edit(new User(session.getUser().getUsername()), request);
+          if (result.getStatus() == 0) {
+            System.err.println(result.getMessage());
+            return;
+          }
+          fileStream.write(RemoteInputStreamUtils.toBytes(result.getRemoteInputStream()));
 
-        session.setOccupiedFilePath(filepath);
-        session.setOccupiedFileName(docName);
-        session.setSectionIndex(secNumber);
-        long address = Long.parseLong(result.getMessage());
-        try {
+          session.setOccupiedFilePath(filepath);
+          session.setOccupiedFileName(docName);
+          session.setSectionIndex(secNumber);
+          long address = Long.parseLong(result.getMessage());
           messageReceiver.setNewGroup(address);
-        } catch (Exception ex) {
-          ex.printStackTrace();
+        } catch (IOException e) {
+          System.err.println(e.getMessage());
+          throw new RuntimeException(e);
         }
-      } catch (IOException ex) {
-        ex.printStackTrace();
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    } else System.err.println("You're not logged in");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Stops editing the current section and leave multicast group.
    */
-  private void editEnd() {
-    if (session != null) {
-      if (session.isEditing()) {
-        try (FileChannel fileChannel = FileChannel.open(Paths.get(session.getOccupiedFilePath()), StandardOpenOption.READ);
-             InputStream stream = Channels.newInputStream(fileChannel)) {
-          RemoteInputStreamServer remoteFileData = new SimpleRemoteInputStream(stream);
-          Request request = new Request();
-          request.setDocName(session.getOccupiedFileName());
-          request.setSectionNum(session.getSectionIndex());
-          request.setRemoteInputStream(remoteFileData);
-          request.setToken(session.getSessionToken());
-          Result result = serverInterface.editEnd(new User(session.getUser().getUsername()), request);
-          if (result.getStatus() == 0) {
-            System.err.println(result.getMessage());
-            System.out.println("ready to send");
-            return;
+  private void editEnd() throws Exception {
+    try {
+      if (session != null) {
+        if (session.isEditing()) {
+          try (FileChannel fileChannel = FileChannel.open(Paths.get(session.getOccupiedFilePath()), StandardOpenOption.READ);
+               InputStream stream = Channels.newInputStream(fileChannel)) {
+            RemoteInputStreamServer remoteFileData = new SimpleRemoteInputStream(stream);
+            Request request = new Request();
+            request.setDocName(session.getOccupiedFileName());
+            request.setSectionNum(session.getSectionIndex());
+            request.setRemoteInputStream(remoteFileData);
+            request.setToken(session.getSessionToken());
+            Result result = serverInterface.editEnd(new User(session.getUser().getUsername()), request);
+            if (result.getStatus() == 0) {
+              System.err.println(result.getMessage());
+              throw new RuntimeException();
+            }
+            session.setOccupiedFilePath(null);
+            session.setOccupiedFileName(null);
+            session.setSectionIndex(0);
+            messageReceiver.setNewGroup(0);
+          } catch (IOException ex) {
+            System.err.println(ex.getMessage());
           }
-          session.setOccupiedFilePath(null);
-          session.setOccupiedFileName(null);
-          session.setSectionIndex(0);
-          messageReceiver.setNewGroup(0);
-        } catch (Exception ex) {
-          printException(ex);
-        }
-      } else System.err.println("You're not editing any section");
-    } else System.err.println("You're not logged in");
+        } else System.err.println("You're not editing any section");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -453,32 +482,41 @@ public class Client {
           Result result = serverInterface.showSection(new User(session.getUser().getUsername()), request);
           byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
           fileStream.write(bytes);
-//          if (result.getStatus() == 1) {
-//            if (!editor.equals("None")) {
-//              System.out.println(String.format("%s is editing the section right now", editor));
-//            } else System.out.println("None is editing this section");
-//          }
+
+          if (result.getStatus() == 0) {
+            System.err.println(result.getMessage());
+            throw new RuntimeException();
+          } else {
+            if (!result.getMessage().equals("None")) {
+              System.out.println(result.getMessage() + " is editing the section right now");
+            } else System.out.println("No one is editing this section");
+          }
         } catch (IOException ex) {
           ex.printStackTrace();
-          printException(ex);
+          System.err.println(ex);
         }
       } else System.err.println("You're not logged in");
     } catch (Exception e) {
-      e.printStackTrace();
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
     }
-
   }
 
   /**
    * Gets the list of documents the user has permissions.
    */
   private void documentsList() throws Exception {
-    if (session != null) {
-      Request request = new Request();
-      request.setToken(session.getSessionToken());
-      Result result = serverInterface.listOwnedDocs(new User(session.getUser().getUsername()), request);
-      System.out.println(result.getMessage());
-    } else System.err.println("You're not logged in");
+    try {
+      if (session != null) {
+        Request request = new Request();
+        request.setToken(session.getSessionToken());
+        Result result = serverInterface.listOwnedDocs(new User(session.getUser().getUsername()), request);
+        System.out.println(result.getMessage());
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -486,16 +524,21 @@ public class Client {
    * receive a notification.
    */
   private void share(String user, String docName) throws Exception {
-    Request request = new Request();
-    request.setToken(session.getSessionToken());
-    request.setTargetUser(new User(user));
-    request.setDocName(docName);
-    Result result = serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
+    try {
+      Request request = new Request();
+      request.setToken(session.getSessionToken());
+      request.setTargetUser(new User(user));
+      request.setDocName(docName);
+      Result result = serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
 
-    if (result.getStatus() == 1) {
-      System.out.println("Document shared successfully");
-    } else {
-      System.err.println(result.getMessage());
+      if (result.getStatus() == 1) {
+        System.out.println("Document shared successfully");
+      } else {
+        System.err.println(result.getMessage());
+      }
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
     }
   }
 
@@ -513,17 +556,25 @@ public class Client {
           request.setToken(session.getSessionToken());
           Result result = serverInterface.showDocumentContent(new User(session.getUser().getUsername()), request);
 
+          if (result.getStatus() == 0) {
+            System.err.println(result.getMessage());
+            throw new RuntimeException();
+          } else {
+            if (!result.getMessage().isEmpty()) {
+              System.out.println(String.format("These are the on editing sections: %s", result.getMessage()));
+            } else System.out.println("No one is editing this document");
+          }
+
           byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
           fileStream.write(bytes);
-//          if (!result.getMessage().equals("None")) {
-//            System.out.println(String.format("These are the on editing sections: %s", result.));
-//          } else System.out.println("None is editing this document");
+
         } catch (IOException ex) {
-          printException(ex);
+          System.err.println(ex.getMessage());
         }
       } else System.err.println("You're not logged in");
     } catch (Exception e) {
-      e.printStackTrace();
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
     }
   }
 
@@ -531,53 +582,60 @@ public class Client {
   /**
    * Print all new notifications collected since the last printing.
    */
-  private void printNews() {
-    if (session != null) {
-      List<String> notifications = notiClientRunnable.getAllNotifications();
-      if (!notifications.isEmpty())
-        System.out.println("You have permission on these new documents: " + String.join(",", notifications));
-      else System.err.println("No news available");
-    } else System.err.println("You're not logged in");
+  private void printNews() throws Exception {
+    try {
+      if (session != null) {
+        List<String> notifications = notiClientRunnable.getAllNotifications();
+        if (!notifications.isEmpty())
+          System.out.println("You have permission on these new documents: " + String.join(",", notifications));
+        else System.err.println("No news available");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Shows all new received messages.
    */
-  private void showMessages() {
-    if (session != null) {
-      if (session.isEditing()) {
-        List<Message> messages = messageReceiver.retrieve();
-        for (Message message : messages)
-          System.out.println(message);
-      } else System.err.println("You're not editing any document");
-    } else System.err.println("You're not logged in");
+  private void showMessages() throws Exception {
+    try {
+      if (session != null) {
+        if (session.isEditing()) {
+          List<Message> messages = messageReceiver.retrieve();
+          for (Message message : messages)
+            System.out.println(message);
+        } else System.err.println("You're not editing any document");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
 
   /**
    * Send a new UDP multicast packet to every listening receiver
    */
-  private void sendMessage(String text) {
-    if (session != null) {
-      if (session.isEditing()) {
-        InetAddress groupAddress;
-        if ((groupAddress = messageReceiver.getActiveGroup()) != null) {
-          try {
-            Message message = new Message(session.getUser().getUsername(), text, System.currentTimeMillis());
-            messageSender.sendMessage(message, new InetSocketAddress(groupAddress, UDP_PORT));
-          } catch (Exception ex) {
-            printException(ex);
-          }
-        } else System.err.println("Generic message sending error");
-      } else System.err.println("You're not editing any document");
-    } else System.err.println("You're not logged in");
+  private void sendMessage(String text) throws Exception {
+    try {
+      if (session != null) {
+        if (session.isEditing()) {
+          InetAddress groupAddress;
+          if ((groupAddress = messageReceiver.getActiveGroup()) != null) {
+            try {
+              Message message = new Message(session.getUser().getUsername(), text, System.currentTimeMillis());
+              messageSender.sendMessage(message, new InetSocketAddress(groupAddress, UDP_PORT));
+            } catch (Exception ex) {
+              System.err.println(ex.getMessage());
+            }
+          } else System.err.println("Generic message sending error");
+        } else System.err.println("You're not editing any document");
+      } else System.err.println("You're not logged in");
+    } catch (Exception e) {
+      System.err.println(e.getMessage());
+      throw new RuntimeException(e);
+    }
   }
-
-  /**
-   * Print easy to read exception.
-   */
-  private void printException(Exception ex) {
-    System.err.println(ex.getMessage());
-  }
-
 
 }

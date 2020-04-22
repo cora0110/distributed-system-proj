@@ -9,9 +9,9 @@ import java.util.List;
 
 /**
  * NotiClientRunnable.java
- *
- * A thread that runs separately with the client that receives notifications
- * from server every 3 seconds and manage notifications from other clients.
+ * <p>
+ * A thread that runs separately with the client that receives notifications from server every 3
+ * seconds and manage notifications from other clients.
  *
  * @version 2020-4-21
  */
@@ -31,14 +31,16 @@ public class NotiClientRunnable implements Runnable {
    */
   @Override
   public void run() {
-    while (isAlive && user != null) {
+    while (isAlive) {
       try {
-        Result result = serverInterface.getNotifications(user);
-        List<String> unreadNotifications = result.getUnreadNotifications();
-        if (null != unreadNotifications && !unreadNotifications.isEmpty()) {
-          System.out.println("You have a new notification.");
-          notifications = unreadNotifications;
-          user.setNotifications(unreadNotifications);
+        if (user != null) {
+          Result result = serverInterface.getNotifications(user);
+          List<String> unreadNotifications = result.getUnreadNotifications();
+          if (null != unreadNotifications && !unreadNotifications.isEmpty()) {
+            System.out.println("You have a new notification.");
+            notifications = unreadNotifications;
+            user.setNotifications(unreadNotifications);
+          }
         }
         Thread.sleep(3000);
       } catch (Exception e) {
@@ -76,30 +78,6 @@ public class NotiClientRunnable implements Runnable {
         notifications.clear();
       }
     }
-  }
-
-  public List<String> getNotifications() {
-    return this.notifications;
-  }
-
-  public void setNotifications(List<String> notifications) {
-    this.notifications = notifications;
-  }
-
-  public boolean isAlive() {
-    return this.isAlive;
-  }
-
-  public void setAlive(boolean isAlive) {
-    this.isAlive = isAlive;
-  }
-
-  public ServerInterface getServerInterface() {
-    return this.serverInterface;
-  }
-
-  public void setServerInterface(ServerInterface serverInterface) {
-    this.serverInterface = serverInterface;
   }
 
   public User getUser() {

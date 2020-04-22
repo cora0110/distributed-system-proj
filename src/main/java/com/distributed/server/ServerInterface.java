@@ -10,8 +10,8 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
 
-/** ServerInterface.java
- * Interface of class Server
+/**
+ * ServerInterface.java Interface of class Server
  *
  * @version 2020-4-21
  */
