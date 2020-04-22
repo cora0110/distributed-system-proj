@@ -11,6 +11,7 @@ import com.distributed.model.Result;
 import com.distributed.model.Section;
 import com.distributed.model.User;
 import com.healthmarketscience.rmiio.RemoteInputStream;
+import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
 import org.apache.commons.io.FileUtils;
@@ -45,9 +46,8 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * Server.java
- * <p>
- * Implements the server class that contains methods for user/document administration and 2-phase
- * commit.
+ *
+ * Implements the server class that contains methods for user/document administration and 2-phase commit.
  *
  * @version 2020-4-21
  */
@@ -70,9 +70,8 @@ public class Server implements ServerInterface {
 
   /**
    * constructor
-   *
-   * @param currPort    port# for current server
-   * @param centralPort port# for central server
+   * @param currPort  port# for current server
+   * @param centralPort  port# for central server
    * @throws RemoteException
    */
   public Server(int currPort, int centralPort) throws RemoteException {
@@ -142,9 +141,7 @@ public class Server implements ServerInterface {
 //  }
 
   /**
-   * Create a user. Start the 2PC process to sync with other servers, and update the local user
-   * database
-   *
+   * Create a user. Start the 2PC process to sync with other servers, and update the local user database
    * @param user user reference
    * @return result of 2PC: status 0-> fail, 1-> success, and message
    * @throws RemoteException
@@ -170,9 +167,7 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Login a user. Start the 2PC process to sync with other servers, and update the local alive user
-   * database
-   *
+   * Login a user. Start the 2PC process to sync with other servers, and update the local alive user database
    * @param user
    * @return 2PC result: status 0-> fail, 1-> success, and message
    * @throws RemoteException
@@ -211,9 +206,7 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Logout a user. Start the 2PC process to sync with other servers, and update the local alive
-   * user database
-   *
+   * Logout a user. Start the 2PC process to sync with other servers, and update the local alive user database
    * @param user
    * @return 2pc result: status 0-> fail, 1-> success, and message
    * @throws RemoteException
@@ -239,9 +232,8 @@ public class Server implements ServerInterface {
 
 
   /**
-   * Edit a document. Need to update user status and document database. Start the 2PC process to
-   * sync with other servers.
-   *
+   * Edit a document. Need to update user status and document database.
+   * Start the 2PC process to sync with other servers.
    * @param user
    * @param request
    * @return 2PC result: status 0-> fail, 1-> success, and message
@@ -304,9 +296,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Complete editing a document. Need to commit the document update. Start the 2PC process to sync
-   * with other servers.
-   *
+   * Complete editing a document. Need to commit the document update.
+   * Start the 2PC process to sync with other servers.
    * @param user
    * @param request
    * @return 2pc result: status 0-> fail, 1-> success, and message
@@ -369,8 +360,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Create a new document. Start the 2PC process to sync with other servers.
-   *
+   * Create a new document.
+   * Start the 2PC process to sync with other servers.
    * @param user
    * @param request
    * @return 2pc result: status 0-> fail, 1-> success, and message
@@ -409,7 +400,6 @@ public class Server implements ServerInterface {
 
   /**
    * Reveal the section as requested
-   *
    * @param user
    * @param request
    * @return result: status 0-> fail, 1-> success, and message
@@ -458,7 +448,6 @@ public class Server implements ServerInterface {
 
   /**
    * Reveal the document content as requested
-   *
    * @param user
    * @param request
    * @return result: status 0-> fail, 1-> success, and message
@@ -495,7 +484,6 @@ public class Server implements ServerInterface {
 
   /**
    * List all docs that current user has access to
-   *
    * @param user
    * @param request
    * @return result: status 0-> fail, 1-> success, and message
@@ -524,10 +512,9 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Share doc to another user to let him/her have the access to edit the doc. Only the doc creator
-   * has the access to share.
-   *
-   * @param user    the user who sends the shared doc
+   * Share doc to another user to let him/her have the access to edit the doc.
+   * Only the doc creator has the access to share.
+   * @param user the user who sends the shared doc
    * @param request
    * @return result: status 0-> fail, 1-> success, and message
    * @throws RemoteException
@@ -555,10 +542,6 @@ public class Server implements ServerInterface {
       return new Result(0, "The target user does not exist.");
     }
 
-    if (document.getAuthors().contains(request.getTargetUser())) {
-      return new Result(1, "This user already has access to this doc.");
-    }
-
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.SHARE);
@@ -580,7 +563,6 @@ public class Server implements ServerInterface {
 
   /**
    * Get notifications from other server
-   *
    * @param user
    * @return result: status 0-> fail, 1-> success, and message
    * @throws RemoteException
@@ -609,7 +591,6 @@ public class Server implements ServerInterface {
 
   /**
    * Recover data from backup data
-   *
    * @param backupData
    * @return true-> success, false-> fail
    */
@@ -655,7 +636,6 @@ public class Server implements ServerInterface {
 
   /**
    * Help target server recover the data
-   *
    * @param targetPort port# of the target server
    * @return true-> success, false-> fail
    */
@@ -672,11 +652,11 @@ public class Server implements ServerInterface {
     String targetDataDir = "./server_data_" + targetPort + "/";
     // put userDatabase dat file
     File file = new File(DATA_DIR + USER_DB_NAME);
-    if (file.isFile()) {
+    if(file.isFile()) {
       fileStreamMap.put(targetDataDir + USER_DB_NAME, getBytes(DATA_DIR + USER_DB_NAME));
     }
     file = new File(DATA_DIR + DOC_DB_NAME);
-    if (file.isFile()) {
+    if(file.isFile()) {
       // put DocumentDatabase dat file
       fileStreamMap.put(targetDataDir + DOC_DB_NAME, getBytes(DATA_DIR + DOC_DB_NAME));
     }
@@ -685,12 +665,15 @@ public class Server implements ServerInterface {
     for (Document doc : documentDatabase.getDocuments()) {
       for (Section section : doc.getSections()) {
         String currPath = section.getPath();
+//        System.out.println("origin path " + currPath);
         String pattern = "(.*data_)([0-9]+)(/.*)";
         // replace port in the path
         String targetPath = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
         // change path stored in database
+//        System.out.println("target path " + currPath);
         file = new File(currPath);
-        if (file.isFile()) {
+        if(file.isFile()) {
+//          System.out.println("put path " + currPath);
           fileStreamMap.put(targetPath, getBytes(currPath));
         }
       }
@@ -711,7 +694,6 @@ public class Server implements ServerInterface {
 
   /**
    * Get byte array from file
-   *
    * @param filePath
    * @return byte array
    */
@@ -725,10 +707,17 @@ public class Server implements ServerInterface {
     return null;
   }
 
+//  private InputStream getInputStream(RemoteInputStream remoteInputStream) {
+//    try {
+//      return RemoteInputStreamClient.wrap(remoteInputStream);
+//    } catch (IOException e) {
+//      serverLogger.log(e.getMessage());
+//    }
+//    return null;
+//  }
 
   /**
    * initialize user database
-   *
    * @return userDB
    */
   private UserDatabase initUserDB() {
@@ -738,7 +727,6 @@ public class Server implements ServerInterface {
 
   /**
    * load user database
-   *
    * @return userDB
    */
   private UserDatabase loadUserDB() {
@@ -751,7 +739,6 @@ public class Server implements ServerInterface {
 
   /**
    * initialize document database
-   *
    * @return documentDB
    */
   private DocumentDatabase initDocumentDB() {
@@ -761,7 +748,6 @@ public class Server implements ServerInterface {
 
   /**
    * load document database
-   *
    * @return documentDB
    */
   private DocumentDatabase loadDocumentDB() {
@@ -781,8 +767,9 @@ public class Server implements ServerInterface {
   }
 
   /**
+   *
    * @param transactionID transaction id
-   * @param commitParams  commit parameters
+   * @param commitParams commit parameters
    * @return 2pc result: status 0-> abort, 1-> commit, and message
    */
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
@@ -799,7 +786,6 @@ public class Server implements ServerInterface {
 
   /**
    * Update commit params database with userDB or aliveUserDB (not documentDB)
-   *
    * @param commitParams
    * @return commitParams
    */
@@ -851,9 +837,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Coordinator method for 2PC PhaseI: send prepare request to all peers. If all live peers
-   * responded with `prepare`, return true.
-   *
+   * Coordinator method for 2PC
+   * PhaseI: send prepare request to all peers. If all live peers responded with `prepare`, return true.
    * @param transactionID
    * @param commitParams
    * @return false -> aborted, true -> prepared
@@ -929,8 +914,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Participant method for 2PC: Respond the prepare() request from coordinator
-   *
+   * Participant method for 2PC:
+   * Respond the prepare() request from coordinator
    * @param transactionID
    * @param commitParams
    * @return false-> abort, true -> prepared
@@ -951,12 +936,10 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Coordinator method for 2PC Phase II : send commit() request to all peers. If all live peers
-   * responded with `commit`, return true.
-   *
+   * Coordinator method for 2PC
+   * Phase II : send commit/abort() request to all peers.
    * @param transactionID
-   * @param ack
-   * @return false -> aborted, true -> commit
+   * @param ack true -> sends COMMIT to peers, false -> sends ABORT to peers
    */
   @Override
   public void commitOrAbort(UUID transactionID, boolean ack) {
@@ -1043,8 +1026,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Participant method for 2PC Phase II : responde commit() request from coordinator
-   *
+   * Participant method for 2PC
+   * Phase II : responde commit() request from coordinator
    * @param transactionID
    * @return false -> aborted, true -> commit
    */
@@ -1062,8 +1045,8 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Participant method for 2PC Receive abort() request from coordinator and update temp status.
-   *
+   * Participant method for 2PC
+   * Receive abort() request from coordinator and update temp status.
    * @param transactionID
    * @return
    */
@@ -1076,9 +1059,11 @@ public class Server implements ServerInterface {
   }
 
   /**
-   * Participant method for 2PC Receive execute commit() request from coordinator. The requests
-   * include: CREATE_USER /LOGIN /LOGOUT EDIT/ SHARE /CREATE_DOCUMENT /EDIT_END GET_NOTIFICATIONS
-   *
+   * Participant method for 2PC
+   * Receive execute commit() request from coordinator. The requests include:
+   *  CREATE_USER /LOGIN /LOGOUT
+   *  EDIT/ SHARE /CREATE_DOCUMENT /EDIT_END
+   *  GET_NOTIFICATIONS
    * @param commitParams
    * @return
    */
@@ -1161,7 +1146,6 @@ public class Server implements ServerInterface {
 
   /**
    * get server status from central server
-   *
    * @param port
    * @return 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
    */
@@ -1178,8 +1162,7 @@ public class Server implements ServerInterface {
 
   /**
    * Set server status through the central server
-   *
-   * @param port   port# if the server to set
+   * @param port port# if the server to set
    * @param status 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
    */
   private void setServerStatus(int port, int status) {
@@ -1194,7 +1177,6 @@ public class Server implements ServerInterface {
 
   /**
    * Get peers from central server
-   *
    * @param currPort current server port
    * @return list of all server ports except for the curr server
    */
@@ -1211,7 +1193,6 @@ public class Server implements ServerInterface {
 
   /**
    * send message to central server
-   *
    * @param message
    */
   private void sendMessageToCentral(String message) {
@@ -1227,7 +1208,6 @@ public class Server implements ServerInterface {
 
   /**
    * add commit param to temp storage.
-   *
    * @param transactionID
    * @param commitParams
    */
