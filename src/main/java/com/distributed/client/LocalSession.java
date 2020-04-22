@@ -2,6 +2,12 @@ package com.distributed.client;
 
 import com.distributed.model.User;
 
+/**
+ * LocalSession.java
+ * Keeps track of the current user and document information for the current session.
+ *
+ * @version 2020-4-21
+ */
 public class LocalSession {
   private final String sessionToken;
   private User user;
@@ -22,7 +28,7 @@ public class LocalSession {
     return occupiedFilePath != null;
   }
 
-  public String getSessionToken() {
+  String getSessionToken() {
     return this.sessionToken;
   }
 
@@ -34,27 +40,27 @@ public class LocalSession {
     this.user = user;
   }
 
-  public String getOccupiedFilePath() {
+  String getOccupiedFilePath() {
     return occupiedFilePath;
   }
 
-  public void setOccupiedFilePath(String occupiedFilePath) {
+  void setOccupiedFilePath(String occupiedFilePath) {
     this.occupiedFilePath = occupiedFilePath;
   }
 
-  public String getOccupiedFileName() {
+  String getOccupiedFileName() {
     return occupiedFileName;
   }
 
-  public void setOccupiedFileName(String occupiedFileName) {
+  void setOccupiedFileName(String occupiedFileName) {
     this.occupiedFileName = occupiedFileName;
   }
 
-  public int getSectionIndex() {
+  int getSectionIndex() {
     return sectionIndex;
   }
 
-  public void setSectionIndex(int sectionIndex) {
+  void setSectionIndex(int sectionIndex) {
     this.sectionIndex = sectionIndex;
   }
 }

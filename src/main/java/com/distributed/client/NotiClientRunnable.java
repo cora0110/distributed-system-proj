@@ -7,6 +7,14 @@ import com.distributed.server.ServerInterface;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * NotiClientRunnable.java
+ *
+ * A thread that runs separately with the client that receives notifications
+ * from server every 3 seconds and manage notifications from other clients.
+ *
+ * @version 2020-4-21
+ */
 public class NotiClientRunnable implements Runnable {
 
   private List<String> notifications;
@@ -18,6 +26,9 @@ public class NotiClientRunnable implements Runnable {
     this.serverInterface = serverInterface;
   }
 
+  /**
+   * Fetch notifications from server every 3 seconds
+   */
   @Override
   public void run() {
     while (isAlive && user != null) {
@@ -36,14 +47,14 @@ public class NotiClientRunnable implements Runnable {
     }
   }
 
-  public void stop() {
+  void stop() {
     isAlive = false;
   }
 
   /**
    * Get all new notifications received.
    */
-  public List<String> getAllNotifications() {
+  List<String> getAllNotifications() {
     List<String> res = new ArrayList<>();
     if (null != notifications) {
       synchronized (notifications) {
@@ -59,7 +70,7 @@ public class NotiClientRunnable implements Runnable {
   /**
    * Clear notifications.
    */
-  public void clearNotificationList() {
+  void clearNotificationList() {
     if (null != notifications) {
       synchronized (notifications) {
         notifications.clear();

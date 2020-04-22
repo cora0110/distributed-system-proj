@@ -33,6 +33,12 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Client.java
+ *
+ * Implements a client class and methods.
+ * @version 2020-4-21
+ */
 public class Client {
 
   private static String CENTRAL_SERVER_HOST = "127.0.0.1";
@@ -47,6 +53,10 @@ public class Client {
   private LocalSession session;
   private User user;
 
+  /**
+   * constructor
+   * @param clientName
+   */
   public Client(String clientName) {
     try {
       this.clientName = clientName;
@@ -131,7 +141,7 @@ public class Client {
   /**
    * Loop for input commands, interprets and executes the command.
    */
-  private void commandDispatchingLoop() throws NotBoundException, IOException {
+  private void commandDispatchingLoop(){
     String command = null;
     Scanner input = new Scanner(System.in);
     boolean isAlive = true;
@@ -288,6 +298,12 @@ public class Client {
     }
   }
 
+  /**
+   * user login
+   * @param username
+   * @param password
+   * @throws Exception
+   */
   private void login(String username, String password) throws Exception {
     if (session == null) {
       Result result = serverInterface.login(new User(username, password));
@@ -307,7 +323,7 @@ public class Client {
   }
 
   /**
-   * Kill session, stop NotificationClientThread and clears notifications.
+   * User logout. Kill session, stop NotificationClientThread and clears notifications.
    */
   private void logout() throws Exception {
     if (session != null) {
