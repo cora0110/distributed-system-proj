@@ -44,6 +44,13 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Server.java
+ *
+ * Implements the server class that contains methods for user/document administration and 2-phase commit.
+ *
+ * @version 2020-4-21
+ */
 public class Server implements ServerInterface {
   private final String DATA_DIR;
   private final String USER_DB_NAME = "UserDB.dat";
@@ -61,6 +68,12 @@ public class Server implements ServerInterface {
   private ConcurrentMap<UUID, ConcurrentMap<Integer, Boolean>> prepareResponseMap;
   private ConcurrentMap<UUID, ConcurrentMap<Integer, Boolean>> commitResponseMap;
 
+  /**
+   * constructor
+   * @param currPort  port# for current server
+   * @param centralPort  port# for central server
+   * @throws RemoteException
+   */
   public Server(int currPort, int centralPort) throws RemoteException {
     this.currPort = currPort;
     this.serverName = Server.class.getSimpleName() + currPort;
@@ -127,6 +140,12 @@ public class Server implements ServerInterface {
 //    }
 //  }
 
+  /**
+   * Create a user. Start the 2PC process to sync with other servers, and update the local user database
+   * @param user user reference
+   * @return result of 2PC: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result createUser(User user) throws RemoteException {
     String username = user.getUsername();
@@ -147,6 +166,12 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Login a user. Start the 2PC process to sync with other servers, and update the local alive user database
+   * @param user
+   * @return 2PC result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result login(User user) throws RemoteException {
     if (aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -180,6 +205,12 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Logout a user. Start the 2PC process to sync with other servers, and update the local alive user database
+   * @param user
+   * @return 2pc result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result logout(User user) throws RemoteException {
     CommitParams commitParams = new CommitParams();
@@ -199,6 +230,15 @@ public class Server implements ServerInterface {
 
   }
 
+
+  /**
+   * Edit a document. Need to update user status and document database.
+   * Start the 2PC process to sync with other servers.
+   * @param user
+   * @param request
+   * @return 2PC result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result edit(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -255,6 +295,14 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Complete editing a document. Need to commit the document update.
+   * Start the 2PC process to sync with other servers.
+   * @param user
+   * @param request
+   * @return 2pc result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result editEnd(User user, Request request) throws RemoteException {
     try {
@@ -311,7 +359,14 @@ public class Server implements ServerInterface {
 
   }
 
-
+  /**
+   * Create a new document.
+   * Start the 2PC process to sync with other servers.
+   * @param user
+   * @param request
+   * @return 2pc result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result createDocument(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -343,6 +398,13 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Reveal the section as requested
+   * @param user
+   * @param request
+   * @return result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result showSection(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -384,6 +446,13 @@ public class Server implements ServerInterface {
     return new Result(1, editingUser.getUsername());
   }
 
+  /**
+   * Reveal the document content as requested
+   * @param user
+   * @param request
+   * @return result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result showDocumentContent(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -413,7 +482,13 @@ public class Server implements ServerInterface {
     }
   }
 
-
+  /**
+   * List all docs that current user has access to
+   * @param user
+   * @param request
+   * @return result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result listOwnedDocs(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -436,6 +511,14 @@ public class Server implements ServerInterface {
     return new Result(1, names);
   }
 
+  /**
+   * Share doc to another user to let him/her have the access to edit the doc.
+   * Only the doc creator has the access to share.
+   * @param user the user who sends the shared doc
+   * @param request
+   * @return result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result shareDoc(User user, Request request) throws RemoteException {
     if (!aliveUserDatabase.isLoggedIn(user.getUsername())) {
@@ -478,6 +561,12 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Get notifications from other server
+   * @param user
+   * @return result: status 0-> fail, 1-> success, and message
+   * @throws RemoteException
+   */
   @Override
   public Result getNotifications(User user) throws RemoteException {
     Result ret = new Result();
@@ -500,7 +589,11 @@ public class Server implements ServerInterface {
     return ret;
   }
 
-
+  /**
+   * Recover data from backup data
+   * @param backupData
+   * @return true-> success, false-> fail
+   */
   @Override
   public boolean recoverData(BackupData backupData) {
     this.documentDatabase = backupData.getDocumentDatabase();
@@ -541,6 +634,11 @@ public class Server implements ServerInterface {
     return true;
   }
 
+  /**
+   * Help target server recover the data
+   * @param targetPort port# of the target server
+   * @return true-> success, false-> fail
+   */
   @Override
   public boolean helpRecoverData(int targetPort) {
     DocumentDatabase documentDatabase = this.documentDatabase;
@@ -594,6 +692,11 @@ public class Server implements ServerInterface {
     return false;
   }
 
+  /**
+   * Get byte array from file
+   * @param filePath
+   * @return byte array
+   */
   private byte[] getBytes(String filePath) {
     try (FileChannel fileChannel = FileChannel.open(Paths.get(filePath), StandardOpenOption.READ);
          InputStream stream = Channels.newInputStream(fileChannel)) {
@@ -613,11 +716,19 @@ public class Server implements ServerInterface {
 //    return null;
 //  }
 
+  /**
+   * initialize user database
+   * @return userDB
+   */
   private UserDatabase initUserDB() {
     UserDatabase loadedUsersDB = loadUserDB();
     return loadedUsersDB == null ? new UserDatabase() : loadedUsersDB;
   }
 
+  /**
+   * load user database
+   * @return userDB
+   */
   private UserDatabase loadUserDB() {
     try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + USER_DB_NAME))) {
       return (UserDatabase) input.readObject();
@@ -626,12 +737,19 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * initialize document database
+   * @return documentDB
+   */
   private DocumentDatabase initDocumentDB() {
     DocumentDatabase loadedDocumentsDB = loadDocumentDB();
     return loadedDocumentsDB == null ? new DocumentDatabase() : loadedDocumentsDB;
   }
 
-
+  /**
+   * load document database
+   * @return documentDB
+   */
   private DocumentDatabase loadDocumentDB() {
     try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(DATA_DIR + DOC_DB_NAME))) {
       return (DocumentDatabase) input.readObject();
@@ -640,11 +758,20 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Create data directory according to current server DATA_DIR
+   */
   private void createDataDirectory() {
     File dataDir = new File(DATA_DIR);
     if (!dataDir.isDirectory() || !dataDir.exists()) dataDir.mkdirs();
   }
 
+  /**
+   *
+   * @param transactionID transaction id
+   * @param commitParams commit parameters
+   * @return 2pc result: status 0-> abort, 1-> commit, and message
+   */
   private Result twoPhaseCommit(UUID transactionID, CommitParams commitParams) {
     // update database stored in commitParams
     commitParams = updateCommitParamsDatabase(commitParams);
@@ -657,6 +784,11 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Update commit params database with userDB or aliveUserDB (not documentDB)
+   * @param commitParams
+   * @return commitParams
+   */
   CommitParams updateCommitParamsDatabase(CommitParams commitParams) {
     // documentDB should not update in this step
     switch (commitParams.getCommitEnum()) {
@@ -704,6 +836,13 @@ public class Server implements ServerInterface {
     return commitParams;
   }
 
+  /**
+   * Coordinator method for 2PC
+   * PhaseI: send prepare request to all peers. If all live peers responded with `prepare`, return true.
+   * @param transactionID
+   * @param commitParams
+   * @return false -> aborted, true -> prepared
+   */
   @Override
   public boolean prepare(UUID transactionID, CommitParams commitParams) {
     if (getServerStatus(currPort) != 0) return false;
@@ -774,6 +913,13 @@ public class Server implements ServerInterface {
     return ackCount == agreeAckCount && ackCount >= (numOfPeers / 2);
   }
 
+  /**
+   * Participant method for 2PC:
+   * Respond the prepare() request from coordinator
+   * @param transactionID
+   * @param commitParams
+   * @return false-> abort, true -> prepared
+   */
   @Override
   public boolean receivePrepare(UUID transactionID, CommitParams commitParams) {
     serverLogger.log(serverName, "Prepare: received");
@@ -789,6 +935,13 @@ public class Server implements ServerInterface {
 
   }
 
+  /**
+   * Coordinator method for 2PC
+   * Phase II : send commit() request to all peers. If all live peers responded with `commit`, return true.
+   * @param transactionID
+   * @param ack
+   * @return false -> aborted, true -> commit
+   */
   @Override
   public void commitOrAbort(UUID transactionID, boolean ack) {
     int[] peers = getPeers(currPort);
@@ -873,6 +1026,12 @@ public class Server implements ServerInterface {
     setServerStatus(currPort, 0);
   }
 
+  /**
+   * Participant method for 2PC
+   * Phase II : responde commit() request from coordinator
+   * @param transactionID
+   * @return false -> aborted, true -> commit
+   */
   @Override
   public boolean receiveCommit(UUID transactionID) {
     serverLogger.log(serverName, "Commit: received");
@@ -886,6 +1045,12 @@ public class Server implements ServerInterface {
     return true;
   }
 
+  /**
+   * Participant method for 2PC
+   * Receive abort() request from coordinator and update temp status.
+   * @param transactionID
+   * @return
+   */
   @Override
   public boolean receiveAbort(UUID transactionID) {
     serverLogger.log(serverName, "Abort: received");
@@ -894,6 +1059,15 @@ public class Server implements ServerInterface {
     return true;
   }
 
+  /**
+   * Participant method for 2PC
+   * Receive execute commit() request from coordinator. The requests include:
+   *  CREATE_USER /LOGIN /LOGOUT
+   *  EDIT/ SHARE /CREATE_DOCUMENT /EDIT_END
+   *  GET_NOTIFICATIONS
+   * @param commitParams
+   * @return
+   */
   @Override
   public void executeCommit(CommitParams commitParams) {
     switch (commitParams.getCommitEnum()) {
@@ -971,6 +1145,11 @@ public class Server implements ServerInterface {
     return Channels.newOutputStream(fileChannel);
   }
 
+  /**
+   * get server status from central server
+   * @param port
+   * @return 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
+   */
   private int getServerStatus(int port) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
@@ -982,6 +1161,11 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Set server status through the central server
+   * @param port port# if the server to set
+   * @param status 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
+   */
   private void setServerStatus(int port, int status) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
@@ -992,6 +1176,11 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * Get peers from central server
+   * @param currPort current server port
+   * @return list of all server ports except for the curr server
+   */
   private int[] getPeers(int currPort) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
@@ -1003,6 +1192,10 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * send message to central server
+   * @param message
+   */
   private void sendMessageToCentral(String message) {
     try {
       Registry registry = LocateRegistry.getRegistry(centralPort);
@@ -1014,6 +1207,11 @@ public class Server implements ServerInterface {
     }
   }
 
+  /**
+   * add commit param to temp storage.
+   * @param transactionID
+   * @param commitParams
+   */
   private void addToTempStorage(UUID transactionID, CommitParams commitParams) {
     tempStorage.put(transactionID, commitParams);
   }

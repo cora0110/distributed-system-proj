@@ -6,12 +6,20 @@ import java.io.Serializable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * AliveUserDatabase.java
+ *
+ * Implements data structure and methods for alive users.
+ * Uses ReadWriteLock when updating database.
+ *
+ * @version 2020-4-21
+ */
 public class AliveUserDatabase implements Serializable {
-  ConcurrentHashMap<String, OnlineUserRecord> aliveUsers;
+  ConcurrentHashMap<String, AliveUserRecord> aliveUsers;
   private ReentrantReadWriteLock mutex;
 
   /**
-   * Initializes the underlining {@code ConcurrentHashMap}.
+   * Constructor
    */
   AliveUserDatabase() {
     aliveUsers = new ConcurrentHashMap<>();
@@ -20,19 +28,15 @@ public class AliveUserDatabase implements Serializable {
 
 
   /**
-   * Logs a {@code User} instance into the {@code AliveUsersDB} letting it pass to the online
+   * Logs a User instance into the AliveUsersDB letting it pass to the online
    * state.
-   * <p>
-   * Only one valid token at a time can exist but it would result senseless to look for a
-   * pre-existing {@code User} because the assignment as a key of the {@code ConcurrentHashMap} is a
-   * destructive operation anyway.
    *
    * @param user user reference
    * @return the session token or null if error occurs
    */
   String login(User user) {
     if (user == null) return null;
-    OnlineUserRecord record = new OnlineUserRecord(user);
+    AliveUserRecord record = new AliveUserRecord(user);
     mutex.writeLock().lock();
     aliveUsers.put(user.getUsername(), record);
     mutex.writeLock().unlock();
@@ -44,7 +48,7 @@ public class AliveUserDatabase implements Serializable {
    * When logout, remove the user from the aliveUserDatabase.
    *
    * @param user
-   * @return
+   * @return false if user not exist or is already logged out. otherwise return true.
    */
   boolean logout(User user) {
     if (user == null) return false;
@@ -57,46 +61,56 @@ public class AliveUserDatabase implements Serializable {
   }
 
   /**
-   * Gets a {@code User} object reference from a {@code String} token.
+   * Gets a user object reference from a String token.
    *
    * @param token session token
    * @return user reference or null if error occurs
    */
   User getUserByToken(String token) {
-    for (OnlineUserRecord record : aliveUsers.values())
+    for (AliveUserRecord record : aliveUsers.values())
       if (record.verifyToken(token)) return record.getUser();
     return null;
   }
 
+  /**
+   * Gets a token from a user object
+   * @param username
+   * @return token
+   */
   String getTokenByUser(String username) {
     return aliveUsers.get(username).getToken();
   }
 
-  public boolean isLoggedIn(String username) {
+  /**
+   * Check whether a user is logged in
+   * @param username
+   * @return true if logged in, false if user not exist or logged out.
+   */
+  boolean isLoggedIn(String username) {
     return aliveUsers.containsKey(username) && aliveUsers.get(username).getToken() != null;
   }
 
-  OnlineUserRecord getOnlineUserRecord(String username) {
+  /**
+   * Get user record from user name
+   */
+  AliveUserRecord getOnlineUserRecord(String username) {
     return aliveUsers.get(username);
   }
 
-  /**
-   * The {@code OnlineUserRecord} class represents a {@code OnlineUsersDB} single record and is used
-   * to relate a {@code User} object to its {@code String} session token.
+  /**Helper Class:
    *
-   * @author Federico Gerardi
-   * @author https://azraelsec.github.io/
+   * The AliveUserRecord class represents a aliveUsersDB single record and is used
+   * to relate a User object to its token.
    */
-  public class OnlineUserRecord implements Serializable {
+  public class AliveUserRecord implements Serializable {
     private User user;
     private String token;
 
     /**
-     * Initializes {@code OnlineUserRecord}.
-     *
+     * Constructor
      * @param user user reference
      */
-    OnlineUserRecord(User user) {
+    AliveUserRecord(User user) {
       try {
         this.user = user;
         this.token = user.generateToken();
@@ -106,8 +120,7 @@ public class AliveUserDatabase implements Serializable {
     }
 
     /**
-     * Gets the {@code User}.
-     *
+     * Gets the user.
      * @return user reference
      */
     public User getUser() {
@@ -115,23 +128,26 @@ public class AliveUserDatabase implements Serializable {
     }
 
     /**
-     * Gets the {@code String} session token.
-     *
+     * Gets the session token.
      * @return session token
      */
     String getToken() {
       return token;
     }
 
-    public void setToken(String token) {
+    /**
+     * set token
+     * @param token token
+     */
+    void setToken(String token) {
       this.token = token;
     }
 
     /**
-     * Verifies if the {@code String} session token is this record related or not.
+     * Verifies if the session token is this record related or not.
      *
      * @param token session token
-     * @return true if {@code token} is the actual one, false otherwise
+     * @return true if token is the actual one, false otherwise
      */
     boolean verifyToken(String token) {
       if (token == null) {

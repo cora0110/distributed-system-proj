@@ -10,6 +10,12 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * CentralServer.java
+ * The central service that supports users logging on, adding or removing clients or servers, and other housekeeping tasks.
+ * Assumption: the central server never fails.
+ * @version  2020-4-21
+ */
 public class CentralServer extends UnicastRemoteObject implements CentralServerInterface {
   private String host;
   private int centralPort;
@@ -20,6 +26,14 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   private Map<Integer, Integer> serverStatus;
 
   //TODO check serverPorts.length > 1 in main
+
+  /**
+   * Constructor
+   * @param host  ip
+   * @param currPort  port# for central server
+   * @param serverPorts  port# for servers
+   * @throws RemoteException
+   */
   public CentralServer(String host, int currPort, int[] serverPorts) throws RemoteException {
     this.host = host;
     this.centralPort = currPort;
@@ -57,6 +71,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     }
   }
 
+  /**
+   * Randomly assign an alive server to client.
+   */
   @Override
   public int assignAliveServerToClient() {
     int serverChosen = generateRandomNumber(serverPorts.length);
@@ -66,6 +83,10 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     return serverPorts[serverChosen];
   }
 
+  /**
+   * Kill a slave server and update serverStatus
+   * @param slaveServerPort port
+   */
   @Override
   public void killSlaveServer(int slaveServerPort) {
     try {
@@ -78,6 +99,11 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     }
   }
 
+  /**
+   * Restart a slave server: assign a live server as helper to help the server restart.
+   * @param slaveServerPort port# for the restarting server
+   * @throws RemoteException
+   */
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
     if(serverStatus.get(slaveServerPort) != 2) return;
@@ -107,22 +133,46 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     serverLogger.log(centralName, "No alive slave com.distributed.server found. Data recovery failed.");
   }
 
+  /**
+   * Get the server status
+   * @param port server port #
+   * @return 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
+   * @throws RemoteException
+   */
   @Override
   public int getServerStatus(int port) throws RemoteException {
     if (serverStatus.get(port) == null) return -1;
     return serverStatus.get(port);
   }
 
+  /**
+   * Set server status as input
+   * @param port  server port #
+   * @param status  0 -> empty, 1 -> busy, 2 -> dead
+   * @throws RemoteException
+   */
   @Override
   public void setServerStatus(int port, int status) throws RemoteException {
     serverStatus.put(port, status);
   }
 
+  /**
+   * Receive notification from servers
+   * @param message msg from servers
+   * @throws RemoteException
+   */
   @Override
   public void receiveNotification(String message) throws RemoteException {
     serverLogger.log(centralName, message);
   }
 
+
+  /**
+   * Get all peers (regardless of the server status) to the server from toPort
+   * @param toPort input port number
+   * @return list of peer port numbers
+   * @throws RemoteException
+   */
   @Override
   public int[] getPeers(int toPort) throws RemoteException {
     int[] peers = new int[serverPorts.length - 1];
@@ -135,6 +185,11 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
     return peers;
   }
 
+  /**
+   * generate a random number from 0 to n
+   * @param n
+   * @return a random number from 0 to n
+   */
   private int generateRandomNumber(int n) {
     Random random = new Random();
     return random.nextInt(n);

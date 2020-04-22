@@ -8,19 +8,25 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DocumentDatabase.java
+ * Implements data structure and methods for document database.
+ *
+ * @version 2020-4-21
+ */
 public class DocumentDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
   private List<Document> documents;
 
   /**
-   * Initializes the internal document's {@code ArrayList}.
+   * Initializes the internal document's ArrayList.
    */
   public DocumentDatabase() {
     documents = new ArrayList<>();
   }
 
   /**
-   * Creates a new {@code Document} adding it directly to the {@code DocumentsDatabase}.
+   * Creates a new {@code Document} adding it directly to the DocumentsDatabase.
    *
    * @param path           new document file path
    * @param sectionsNumber new document sections number
@@ -42,7 +48,7 @@ public class DocumentDatabase implements Serializable {
   }
 
   /**
-   * Checks if the input {@code Document}'s name already exists or not.
+   * Checks if the input Document's name already exists or not.
    *
    * @return true if the document already exists, false otherwise
    */
@@ -51,12 +57,12 @@ public class DocumentDatabase implements Serializable {
   }
 
   /**
-   * Looks for the {@code Document} based on its name.
+   * Gets the Document by its name.
    *
    * @param documentName document's name
    * @return the document reference or null if it does not exists yet
    */
-  public Document getDocumentByName(String documentName) {
+  Document getDocumentByName(String documentName) {
     synchronized (documents) {
       for (Document d : documents)
         if (d.getName().compareTo(documentName) == 0) return d;
@@ -65,12 +71,12 @@ public class DocumentDatabase implements Serializable {
   }
 
   /**
-   * Collects all the documents a give {@code User} can access to.
+   * Collects all the documents a given user has access to edit.
    *
    * @param user user reference
    * @return accessible file names
    */
-  public String[] getAllDocumentsNames(User user) {
+  String[] getAllDocumentsNames(User user) {
     List<String> nameList = new ArrayList<>();
     synchronized (documents) {
       for (Document d : documents)
@@ -80,11 +86,11 @@ public class DocumentDatabase implements Serializable {
     return nameList.toArray(new String[0]);
   }
 
-  public List<Document> getDocuments() {
+  List<Document> getDocuments() {
     return this.documents;
   }
 
-  public void setDocuments(List<Document> documents) {
+   void setDocuments(List<Document> documents) {
     this.documents = documents;
   }
 }

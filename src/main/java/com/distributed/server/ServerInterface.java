@@ -10,6 +10,11 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.UUID;
 
+/** ServerInterface.java
+ * Interface of class Server
+ *
+ * @version 2020-4-21
+ */
 public interface ServerInterface extends Remote {
 
   boolean prepare(UUID transactionID, CommitParams commitParams) throws RemoteException;

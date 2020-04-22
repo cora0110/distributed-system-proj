@@ -4,6 +4,12 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * ServerLogger.java
+ *
+ * Implements methods for printing log msg with timestamp
+ * @version 2020-4-21
+ */
 public class ServerLogger {
   /**
    * Gets the timestamp with the current system time in millisecond precision and a human-readable

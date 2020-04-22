@@ -7,13 +7,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * UserDatabase.java
+ * Implements data structure and methods for users.
+ * Uses ReadWriteLock when updating database.
+ *
+ * @version 2020-4-21
+ */
 public class UserDatabase implements Serializable {
   private static final long serialVersionUID = 1L;
-  private List<User> users = new ArrayList<>();
+  private List<User> users;
   private ReentrantReadWriteLock mutex;
 
   /**
-   * Initializes the environment.
+   * Initializes user database
    */
   UserDatabase() {
     users = new ArrayList<>();
@@ -42,7 +49,7 @@ public class UserDatabase implements Serializable {
   }
 
   /**
-   * Registers a new {@code User} storing its data into the {@code UsersDB} if the input credentials
+   * Registers a new user storing its data into the user database if the input credentials
    * do not exist yet.
    *
    * @param username user's username
@@ -61,17 +68,17 @@ public class UserDatabase implements Serializable {
   /**
    * Checks if the input username is available or not.
    *
-   * @param username user's username
+   * @param username
    * @return true if does not exist any user with that username, false otherwise
    */
-  public boolean isUsernameAvailable(String username) {
+  boolean isUsernameAvailable(String username) {
     return getUserByUsername(username) == null;
   }
 
   /**
-   * Gets the {@code User} object from its username {@code String}.
+   * Gets the user object from its username.
    *
-   * @param username user's username
+   * @param username
    * @return related user's object if exists, null otherwise
    */
   User getUserByUsername(String username) {

@@ -3,6 +3,11 @@ package com.distributed.server;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
+/** CentralServerInterface.java
+ * Interface of class CentralServer
+ *
+ * @version 2020-4-21
+ */
 public interface CentralServerInterface extends Remote {
 
   int assignAliveServerToClient() throws RemoteException;

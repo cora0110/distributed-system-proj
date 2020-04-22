@@ -3,6 +3,13 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Scanner;
 
+/**
+ * Admin.java
+ *
+ * Implements an administrator server that can send kill/restart requests to central server.
+ *
+ * @version 2020-4-21
+ */
 public class Admin {
     private static String CENTRAL_SERVER_HOST = "127.0.0.1";
     private static int CENTRAL_SERVER_RMI_PORT = 1200;
