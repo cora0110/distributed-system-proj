@@ -138,7 +138,7 @@ public class Client {
                     "  list: to list all the documents you are able to see and edit\n" +
                     "  share USER DOC: to share a document with another user\n" +
                     "  news: to get all the news\n" +
-                    "  receive: to retrieve all the unread com.distributed.chat messages\n" +
+                    "  receive: to retrieve all the unread chat messages\n" +
                     "  send TEXT: to send the TEXT message regarding the document being edited";
     System.out.println(message);
   }
@@ -271,7 +271,7 @@ public class Client {
   }
 
   /**
-   * Retrieve an available server from central com.distributed.server.
+   * Retrieve an available server from central server.
    *
    * @return assigned server
    */
@@ -301,6 +301,7 @@ public class Client {
         System.out.println("User " + username + " registered successfully!");
       } else {
         System.err.println(result.getMessage());
+        return;
       }
     } catch (Exception e) {
       System.err.println(e.getMessage());
@@ -398,12 +399,12 @@ public class Client {
    * @param chosenFilename output filename
    */
   private void edit(String docName, int secNumber, String chosenFilename) throws Exception {
+    FileChannel fileChannel = null;
+    OutputStream fileStream = null;
     try {
       if (session != null) {
         String filepath = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
-        try (FileChannel fileChannel = FileChannel.open(Paths.get(filepath), StandardOpenOption.CREATE,
-                StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+        try {
           Request request = new Request();
           request.setDocName(docName);
           request.setSectionNum(secNumber);
@@ -413,6 +414,9 @@ public class Client {
             System.err.println(result.getMessage());
             return;
           }
+          fileChannel = FileChannel.open(Paths.get(filepath), StandardOpenOption.CREATE,
+                  StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+          fileStream = Channels.newOutputStream(fileChannel);
           fileStream.write(RemoteInputStreamUtils.toBytes(result.getRemoteInputStream()));
 
           session.setOccupiedFilePath(filepath);
@@ -428,6 +432,17 @@ public class Client {
     } catch (Exception e) {
       System.err.println(e.getMessage());
       throw new RuntimeException(e);
+    } finally {
+      try {
+        if (fileChannel != null) {
+          fileChannel.close();
+        }
+        if (fileChannel != null) {
+          fileStream.close();
+        }
+      } catch (Exception e) {
+        System.err.println(e.getMessage());
+      }
     }
   }
 
@@ -449,7 +464,7 @@ public class Client {
             Result result = serverInterface.editEnd(new User(session.getUser().getUsername()), request);
             if (result.getStatus() == 0) {
               System.err.println(result.getMessage());
-              throw new RuntimeException();
+              return;
             }
             session.setOccupiedFilePath(null);
             session.setOccupiedFileName(null);
@@ -470,35 +485,49 @@ public class Client {
    * Read content of requested section.
    */
   private void showSection(String docName, int secNumber, String chosenFilename) {
+    FileChannel fileChannel = null;
+    OutputStream fileStream = null;
     try {
       if (session != null) {
         String filename = chosenFilename != null ? chosenFilename : DATA_DIR + docName + "_" + secNumber;
-        try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+        try {
           Request request = new Request();
           request.setDocName(docName);
           request.setSectionNum(secNumber);
           request.setToken(session.getSessionToken());
           Result result = serverInterface.showSection(new User(session.getUser().getUsername()), request);
-          byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
-          fileStream.write(bytes);
 
           if (result.getStatus() == 0) {
             System.err.println(result.getMessage());
-            throw new RuntimeException();
+            return;
           } else {
+            byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
+            fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+            fileStream = Channels.newOutputStream(fileChannel);
+            fileStream.write(bytes);
             if (!result.getMessage().equals("None")) {
               System.out.println(result.getMessage() + " is editing the section right now");
             } else System.out.println("No one is editing this section");
           }
         } catch (IOException ex) {
           ex.printStackTrace();
-          System.err.println(ex);
+          System.err.println(ex.getMessage());
         }
       } else System.err.println("You're not logged in");
     } catch (Exception e) {
       System.err.println(e.getMessage());
       throw new RuntimeException(e);
+    } finally {
+      try {
+        if (fileChannel != null) {
+          fileChannel.close();
+        }
+        if (fileChannel != null) {
+          fileStream.close();
+        }
+      } catch (Exception e) {
+        System.err.println(e.getMessage());
+      }
     }
   }
 
@@ -535,6 +564,7 @@ public class Client {
         System.out.println("Document shared successfully");
       } else {
         System.err.println(result.getMessage());
+        return;
       }
     } catch (Exception e) {
       System.err.println(e.getMessage());
@@ -546,11 +576,12 @@ public class Client {
    * Read the requested document and concatenate all its sections.
    */
   private void showDocument(String docName, String outputName) {
+    FileChannel fileChannel = null;
+    OutputStream fileStream = null;
     try {
       if (session != null) {
         String filename = DATA_DIR + (outputName == null ? docName : outputName);
-        try (FileChannel fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-             OutputStream fileStream = Channels.newOutputStream(fileChannel)) {
+        try {
           Request request = new Request();
           request.setDocName(docName);
           request.setToken(session.getSessionToken());
@@ -558,12 +589,14 @@ public class Client {
 
           if (result.getStatus() == 0) {
             System.err.println(result.getMessage());
-            throw new RuntimeException();
+            return;
           } else {
             if (!result.getMessage().isEmpty()) {
               System.out.println(String.format("These are the on editing sections: %s", result.getMessage()));
             } else System.out.println("No one is editing this document");
           }
+          fileChannel = FileChannel.open(Paths.get(filename), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+          fileStream = Channels.newOutputStream(fileChannel);
 
           byte[] bytes = RemoteInputStreamUtils.toBytes(result.getRemoteInputStream());
           fileStream.write(bytes);
@@ -575,6 +608,17 @@ public class Client {
     } catch (Exception e) {
       System.err.println(e.getMessage());
       throw new RuntimeException(e);
+    } finally {
+      try {
+        if (fileChannel != null) {
+          fileChannel.close();
+        }
+        if (fileChannel != null) {
+          fileStream.close();
+        }
+      } catch (Exception e) {
+        System.err.println(e.getMessage());
+      }
     }
   }
 

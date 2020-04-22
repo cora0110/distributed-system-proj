@@ -4,11 +4,11 @@
 
 start central:
 
-corresponding com.distributed.server files are created
+corresponding server files are created
 
-start com.distributed.client \<clientname>:
+start client \<clientname>:
 
-corresponding com.distributed.client file is created
+corresponding client file is created
 
 
 
@@ -40,14 +40,18 @@ Client Command:
 - endedit: to stop the current editing session
 
 - showsec DOC SEC:(OUT) to download the content of the SEC section of DOC document (using OUT output filename)
+    - if not exist -> Section does not exist.
+    - some sections are being edited -> These are the on editing sections: [sectionNum]
+    - no section being edited -> No one is editing this document
   
 - showdoc DOC:(OUT) to download the content concatenation of all the document's sections (using OUT output filename)
+    - if not exist -> Document does not exist.
 
 - logout: to logout
 
-  - already logged in -> Successfully logged out.
-  - not login -> You're not logged in
-  - haven't end edit -> You should 'endedit' before logging out
+    - already logged in -> Successfully logged out.
+    - not login -> You're not logged in
+    - haven't end edit -> You should 'endedit' before logging out
 
 - list: to list all the documents you are able to see and edit
 
@@ -60,7 +64,6 @@ Client Command:
   - inaccessible doc -> You do not have access.
   - non-existing target user -> The target user does not exist.
   - success -> Document shared successfully
-  - a minor issue with notification: duplicates
 
 - news: to get all the news
 
@@ -68,9 +71,11 @@ Client Command:
   - if none -> No news available
 
 - receive: to retrieve all the unread com.distributed.chat messages
+  - is editing doc -> [sender] - message content
+  - not editing any doc -> You're not editing any document
 
 - send TEXT: to send the TEXT message regarding the document being edited
-
+  - not editing doc -> You're not editing any document
 
 
 Consistency test

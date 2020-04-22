@@ -42,6 +42,7 @@ public class Document implements Serializable {
   }
 
   public Section getSectionByIndex(int index) {
+    if (index < 0 || index >= sections.size()) return null;
     return sections.get(index);
   }
 

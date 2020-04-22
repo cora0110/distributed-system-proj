@@ -130,7 +130,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
         }
       }
     }
-    serverLogger.log(centralName, "No alive slave com.distributed.server found. Data recovery failed.");
+    serverLogger.log(centralName, "No alive slave server found. Data recovery failed.");
   }
 
   /**

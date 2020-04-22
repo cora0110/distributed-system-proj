@@ -24,7 +24,7 @@ public class ServerLogger {
   }
 
   /**
-   * Prints a message to the com.distributed.server log timestamped with the current system time
+   * Prints a message to the server log timestamped with the current system time
    *
    * @param message message that needs to print out
    */
