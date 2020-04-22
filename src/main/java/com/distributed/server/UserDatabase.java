@@ -8,9 +8,8 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * UserDatabase.java
- * Implements data structure and methods for users.
- * Uses ReadWriteLock when updating database.
+ * UserDatabase.java Implements data structure and methods for users. Uses ReadWriteLock when
+ * updating database.
  *
  * @version 2020-4-21
  */
@@ -49,8 +48,8 @@ public class UserDatabase implements Serializable {
   }
 
   /**
-   * Registers a new user storing its data into the user database if the input credentials
-   * do not exist yet.
+   * Registers a new user storing its data into the user database if the input credentials do not
+   * exist yet.
    *
    * @param username user's username
    * @param password user's password
@@ -92,6 +91,5 @@ public class UserDatabase implements Serializable {
     mutex.readLock().unlock();
     return null;
   }
-
 
 }

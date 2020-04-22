@@ -4,7 +4,6 @@ import com.distributed.chat.ChatManager;
 import com.distributed.server.AliveUserDatabase;
 import com.distributed.server.DocumentDatabase;
 import com.distributed.server.UserDatabase;
-import com.healthmarketscience.rmiio.RemoteInputStream;
 
 import java.io.Serializable;
 import java.util.Map;

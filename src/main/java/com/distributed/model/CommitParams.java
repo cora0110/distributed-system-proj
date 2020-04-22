@@ -9,8 +9,7 @@ import com.healthmarketscience.rmiio.RemoteInputStream;
 import java.io.Serializable;
 
 /**
- * CommitParams.java
- * Commit parameters for distributed transactions.
+ * CommitParams.java Commit parameters for distributed transactions.
  *
  * @version 2020-4-21
  */
@@ -24,9 +23,6 @@ public class CommitParams implements Serializable {
   private int sectionNum;
   private String targetUser;
   private long multicastAddress;
-
-  // 0: userDB, 1:aliveUserDB, 2:docDB
-  //  private int DBCode;
 
   // in memory database
   private DocumentDatabase documentDatabase;
