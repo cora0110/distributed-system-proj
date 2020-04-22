@@ -40,13 +40,14 @@ Client Command:
 - endedit: to stop the current editing session
 
 - showsec DOC SEC:(OUT) to download the content of the SEC section of DOC document (using OUT output filename)
-
+  
 - showdoc DOC:(OUT) to download the content concatenation of all the document's sections (using OUT output filename)
 
 - logout: to logout
 
-  - already login -> Successfully logged out.
+  - already logged in -> Successfully logged out.
   - not login -> You're not logged in
+  - haven't end edit -> You should 'endedit' before logging out
 
 - list: to list all the documents you are able to see and edit
 
@@ -55,7 +56,16 @@ Client Command:
 
 - share USER DOC: to share a document with another user
 
+  - non-existing doc -> Document does not exist.
+  - inaccessible doc -> You do not have access.
+  - non-existing target user -> The target user does not exist.
+  - success -> Document shared successfully
+  - a minor issue with notification: duplicates
+
 - news: to get all the news
+
+  - if any -> display the news
+  - if none -> No news available
 
 - receive: to retrieve all the unread com.distributed.chat messages
 

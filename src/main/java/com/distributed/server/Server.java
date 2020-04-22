@@ -454,6 +454,10 @@ public class Server implements ServerInterface {
       return new Result(0, "You do not have access.");
     }
 
+    if (userDatabase.getUserByUsername(request.getTargetUser().getUsername()) == null) {
+      return new Result(0, "The target user does not exist.");
+    }
+
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.SHARE);

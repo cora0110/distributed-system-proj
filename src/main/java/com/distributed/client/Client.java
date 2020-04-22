@@ -474,7 +474,13 @@ public class Client {
     request.setToken(session.getSessionToken());
     request.setTargetUser(new User(user));
     request.setDocName(docName);
-    serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
+    Result result = serverInterface.shareDoc(new User(session.getUser().getUsername()), request);
+
+    if (result.getStatus() == 1) {
+      System.out.println("Document shared successfully");
+    } else {
+      System.err.println(result.getMessage());
+    }
   }
 
   /**
