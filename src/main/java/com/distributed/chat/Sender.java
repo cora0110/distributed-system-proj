@@ -11,6 +11,13 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
+/**
+ * Sender.java
+ *
+ * Implements a sender that sends datagram messages via UDP to other clients in the same chat group.
+ *
+ * @version 2020-4-21
+ */
 public class Sender {
 
   private DatagramChannel channel;

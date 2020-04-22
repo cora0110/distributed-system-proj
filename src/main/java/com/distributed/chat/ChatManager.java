@@ -5,6 +5,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * ChatManager.java
+ * Manages chat database of group chat among clients
+ *
+ * @version 2020-4-21
+ */
 public class ChatManager implements Serializable {
   private static final long serialVersionUID = -9086368079210319078L;
 

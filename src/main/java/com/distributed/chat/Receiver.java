@@ -20,6 +20,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Receiver.java
+ *
+ * Implements a receiver class of the chat group
+ *
+ * @version 2020-4-21
+ */
 public class Receiver implements Runnable {
 
   private List<Message> messages;
