@@ -382,6 +382,10 @@ public class Server implements ServerInterface {
       return new Result(0, "Document already exists.");
     }
 
+    if(request.getSectionNum() <= 0) {
+      return new Result(0, "Section number must be positive.");
+    }
+
     CommitParams commitParams = new CommitParams();
     commitParams.setUser(user);
     commitParams.setCommitEnum(CommitEnum.CREATE_DOCUMENT);
