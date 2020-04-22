@@ -15,6 +15,7 @@ import com.healthmarketscience.rmiio.RemoteInputStreamClient;
 import com.healthmarketscience.rmiio.SimpleRemoteInputStream;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -495,16 +496,6 @@ public class Server implements ServerInterface {
     return ret;
   }
 
-//  @Override
-//  public void kill() throws RemoteException {
-//    Registry registry = LocateRegistry.getRegistry(this.currPort);
-//    try {
-//      // TODO: 4/17/20 add store database. shutdown hook
-//      registry.unbind(this.serverName);
-//    } catch (NotBoundException e) {
-//      e.printStackTrace();
-//    }
-//  }
 
   @Override
   public boolean recoverData(BackupData backupData) {
@@ -518,16 +509,28 @@ public class Server implements ServerInterface {
       FileUtils.deleteDirectory(new File(DATA_DIR));
       createDataDirectory();
     } catch (IOException e) {
+      e.printStackTrace();
       serverLogger.log(e.getMessage());
     }
-    Map<String, RemoteInputStream> fileStreamMap = backupData.getFileStreamMap();
+
+    for (Document doc : documentDatabase.getDocuments()) {
+      for (Section section : doc.getSections()) {
+        String previousPath = section.getPath();
+        String pattern = "(.*data_)([0-9]+)(/.*)";
+        String currPath = previousPath.replaceAll(pattern, "$1" + currPort + "$3");
+        section.setPath(currPath);
+      }
+    }
+
+    Map<String, byte[]> fileStreamMap = backupData.getFileStreamMap();
     for (String path : fileStreamMap.keySet()) {
       try {
-        InputStream inputStream = getInputStream(fileStreamMap.get(path));
-        if (inputStream == null) return false;
-        FileUtils.copyInputStreamToFile(inputStream, new File(path));
-      } catch (IOException e) {
-        serverLogger.log(serverName, e.getMessage());
+//        System.out.println(path);
+        File file = new File(path);
+        file.getParentFile().mkdirs();
+        FileUtils.writeByteArrayToFile(file, fileStreamMap.get(path));
+      } catch (Exception e) {
+        e.printStackTrace();
         return false;
       }
     }
@@ -540,25 +543,37 @@ public class Server implements ServerInterface {
     UserDatabase userDatabase = this.userDatabase;
     AliveUserDatabase aliveUserDatabase = this.aliveUserDatabase;
     ChatManager chatManager = this.chatManager;
-    Map<String, RemoteInputStream> fileStreamMap = new HashMap<>();
+    Map<String, byte[]> fileStreamMap = new HashMap<>();
 
     // user file
     // DATA_DIR + "DocDB.dat"
     String targetDataDir = "./server_data_" + targetPort + "/";
     // put userDatabase dat file
-    fileStreamMap.put(targetDataDir + USER_DB_NAME, getRemoteInputStream(DATA_DIR + USER_DB_NAME));
-    // put DocumentDatabase dat file
-    fileStreamMap.put(targetDataDir + DOC_DB_NAME, getRemoteInputStream(DATA_DIR + DOC_DB_NAME));
+    File file = new File(DATA_DIR + USER_DB_NAME);
+    if(file.isFile()) {
+      fileStreamMap.put(targetDataDir + USER_DB_NAME, getBytes(DATA_DIR + USER_DB_NAME));
+    }
+    file = new File(DATA_DIR + DOC_DB_NAME);
+    if(file.isFile()) {
+      // put DocumentDatabase dat file
+      fileStreamMap.put(targetDataDir + DOC_DB_NAME, getBytes(DATA_DIR + DOC_DB_NAME));
+    }
 
     // put section files
     for (Document doc : documentDatabase.getDocuments()) {
       for (Section section : doc.getSections()) {
         String currPath = section.getPath();
+//        System.out.println("origin path " + currPath);
         String pattern = "(.*data_)([0-9]+)(/.*)";
         // replace port in the path
         String targetPath = currPath.replaceAll(pattern, "$1" + targetPort + "$3");
-        section.setPath(targetPath);
-        fileStreamMap.put(targetPath, getRemoteInputStream(currPath));
+        // change path stored in database
+//        System.out.println("target path " + currPath);
+        file = new File(currPath);
+        if(file.isFile()) {
+//          System.out.println("put path " + currPath);
+          fileStreamMap.put(targetPath, getBytes(currPath));
+        }
       }
     }
     BackupData backupData = new BackupData(documentDatabase, userDatabase, aliveUserDatabase, chatManager, fileStreamMap);
@@ -575,24 +590,24 @@ public class Server implements ServerInterface {
     return false;
   }
 
-  private RemoteInputStream getRemoteInputStream(String filePath) {
+  private byte[] getBytes(String filePath) {
     try (FileChannel fileChannel = FileChannel.open(Paths.get(filePath), StandardOpenOption.READ);
          InputStream stream = Channels.newInputStream(fileChannel)) {
-      return new SimpleRemoteInputStream(stream);
+      return IOUtils.toByteArray(stream);
     } catch (Exception e) {
       serverLogger.log("Exception: " + e.getMessage());
     }
     return null;
   }
 
-  private InputStream getInputStream(RemoteInputStream remoteInputStream) {
-    try {
-      return RemoteInputStreamClient.wrap(remoteInputStream);
-    } catch (IOException e) {
-      serverLogger.log(e.getMessage());
-    }
-    return null;
-  }
+//  private InputStream getInputStream(RemoteInputStream remoteInputStream) {
+//    try {
+//      return RemoteInputStreamClient.wrap(remoteInputStream);
+//    } catch (IOException e) {
+//      serverLogger.log(e.getMessage());
+//    }
+//    return null;
+//  }
 
   private UserDatabase initUserDB() {
     UserDatabase loadedUsersDB = loadUserDB();
@@ -891,8 +906,6 @@ public class Server implements ServerInterface {
         int sectionNum = commitParams.getSectionNum();
         this.documentDatabase.getDocumentByName(docName).
                 getSectionByIndex(sectionNum).occupy(commitParams.getUser());
-        System.out.println("ori path "+this.documentDatabase.getDocumentByName(docName).
-                getSectionByIndex(sectionNum).getPath());
         this.chatManager = commitParams.getChatManager();
         break;
       case SHARE:
@@ -919,9 +932,6 @@ public class Server implements ServerInterface {
           Section editingSection = documentDatabase.
                   getDocumentByName(commitParams.getDocName()).
                   getSectionByIndex(commitParams.getSectionNum());
-          System.out.println("ori path "+editingSection.getPath());
-          String targetPath = editingSection.getPathByPort(currPort);
-          System.out.println("path "+targetPath);
           fileStream = this.getWriteStream(editingSection.getPath());
 
           byte[] bytes = commitParams.getBytes();

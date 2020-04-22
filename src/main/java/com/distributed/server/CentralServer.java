@@ -90,6 +90,8 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       if (serverPort == slaveServerPort) continue;
       if (getServerStatus(serverPort) == 0) {
         try {
+          serverLogger.log(centralName, "Assign Server" + serverPort +
+                  " to help Server " + slaveServerPort + " recover data." );
           registry = LocateRegistry.getRegistry(serverPort);
           ServerInterface aliveServer = (ServerInterface) registry.lookup("Server" + serverPort);
           aliveServer.helpRecoverData(slaveServerPort);
