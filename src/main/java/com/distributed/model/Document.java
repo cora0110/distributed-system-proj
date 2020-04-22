@@ -25,7 +25,7 @@ public class Document implements Serializable {
    * Creates a new document with path.
    */
   public static Document create(User creator, String directory, int sectionsNumber, String name) throws IOException {
-    String path = directory + "/" + name;
+    String path = directory + name;
     File document = new File(path);
     if (!document.exists() || !document.isDirectory()) {
       boolean mkdir = document.mkdir();

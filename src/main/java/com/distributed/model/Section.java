@@ -18,7 +18,7 @@ public class Section implements Serializable {
   private ReentrantLock lock;
 
   public Section(String directory, String name) {
-    this.path = directory + "/" + name + ".section";
+    this.path = directory + "/" + "section" + name;
     lock = new ReentrantLock();
   }
 

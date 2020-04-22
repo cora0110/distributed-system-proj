@@ -15,9 +15,9 @@ public class BackupData implements Serializable {
   UserDatabase userDatabase;
   AliveUserDatabase aliveUserDatabase;
   ChatManager chatManager;
-  Map<String, RemoteInputStream> fileStreamMap;
+  Map<String, byte[]> fileStreamMap;
 
-  public BackupData(DocumentDatabase documentDatabase, UserDatabase userDatabase, AliveUserDatabase aliveUserDatabase, ChatManager chatManager, Map<String, RemoteInputStream> fileStreamMap) {
+  public BackupData(DocumentDatabase documentDatabase, UserDatabase userDatabase, AliveUserDatabase aliveUserDatabase, ChatManager chatManager, Map<String, byte[]> fileStreamMap) {
     this.documentDatabase = documentDatabase;
     this.userDatabase = userDatabase;
     this.aliveUserDatabase = aliveUserDatabase;
@@ -57,11 +57,11 @@ public class BackupData implements Serializable {
     this.chatManager = chatManager;
   }
 
-  public Map<String, RemoteInputStream> getFileStreamMap() {
-    return this.fileStreamMap;
+  public Map<String, byte[]> getFileStreamMap() {
+    return fileStreamMap;
   }
 
-  public void setFileStreamMap(Map<String, RemoteInputStream> fileStreamMap) {
+  public void setFileStreamMap(Map<String, byte[]> fileStreamMap) {
     this.fileStreamMap = fileStreamMap;
   }
 }
