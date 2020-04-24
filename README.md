@@ -1,6 +1,6 @@
 ## distributed-system-final-project
 
-###Getting Started
+### Getting Started
 Start Central Server and affiliated servers:
 
 (default central port: 1200, default server ports: 1300, 1400, 1500, 1600, 1700):
@@ -9,7 +9,7 @@ Start Central Server and affiliated servers:
 Start Client:
 
 (Please specify the name of current client, using as the directory name to store files)
-> java -jar Client.jar ${CLIENT_NAME} ${PORT} ${TIMEOUT_MILLISECONDS}
+> java -jar Client.jar ${CLIENT_NAME}
 
 ### Testing
 
