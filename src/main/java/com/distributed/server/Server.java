@@ -392,7 +392,7 @@ public class Server implements ServerInterface {
       return new Result(0, "Document already exists.");
     }
 
-    if(request.getSectionNum() <= 0) {
+    if (request.getSectionNum() <= 0) {
       return new Result(0, "Section number must be positive.");
     }
 
@@ -442,23 +442,23 @@ public class Server implements ServerInterface {
     Section section = document.getSectionByIndex(request.getSectionNum());
     if (section == null) {
       return new Result(0, "Section does not exist.");
-
     }
 
     User editingUser = section.getOccupant();
     RemoteInputStream remoteInputStream;
+
+    try {
+      FileInputStream stream = new FileInputStream(section.getPath());
+      remoteInputStream = new SimpleRemoteInputStream(stream);
+    } catch (FileNotFoundException e) {
+      return new Result(0, "Failure accessing section.");
+    }
+    serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
     if (editingUser == null) {
-      try {
-        FileInputStream stream = new FileInputStream(section.getPath());
-        remoteInputStream = new SimpleRemoteInputStream(stream);
-      } catch (FileNotFoundException e) {
-        return new Result(0, "Failure accessing section.");
-      }
-      serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
       return new Result(1, "None", remoteInputStream);
     }
     serverLogger.log(serverName, CommitEnum.SHOW_SECTION + ": SUCCESS");
-    return new Result(1, editingUser.getUsername());
+    return new Result(1, editingUser.getUsername(), remoteInputStream);
   }
 
   /**

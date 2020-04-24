@@ -6,12 +6,10 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * CentralServer.java The central service that supports users logging on, adding or removing clients
@@ -61,17 +59,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   public static void main(String[] args) throws Exception {
     Logger rmiioLogger = Logger.getLogger("com.healthmarketscience.rmiio");
     rmiioLogger.setLevel(Level.SEVERE);
-    if (args.length < 2) {
-      System.err.println("Not specify at least one central port and one server port.");
-      System.out.println("Using default central port: " + DEFAULT_CENTRAL_PORT + ". Server ports: " + Arrays.toString(DEFAULT_SERVER_PORTS));
-      CentralServer centralServer = new CentralServer("127.0.0.1", DEFAULT_CENTRAL_PORT, DEFAULT_SERVER_PORTS);
-      return;
-    } else {
-      List<Integer> ports = Arrays.stream(args).map(Integer::parseInt).collect(Collectors.toList());
-      List<Integer> serverPortsList = ports.subList(1, ports.size());
-      int[] serverPorts = serverPortsList.stream().mapToInt(i -> i).toArray();
-      CentralServer centralServer = new CentralServer("127.0.0.1", ports.get(0), serverPorts);
-    }
+    System.out.println("Using default central port: " + DEFAULT_CENTRAL_PORT + ". Server ports: " + Arrays.toString(DEFAULT_SERVER_PORTS));
+    CentralServer centralServer = new CentralServer("127.0.0.1", DEFAULT_CENTRAL_PORT, DEFAULT_SERVER_PORTS);
+    return;
   }
 
   /**

@@ -260,10 +260,10 @@ public class Client {
               throw new IllegalArgumentException();
           }
         } catch (IllegalArgumentException ex) {
-          ex.printStackTrace();
+//          ex.printStackTrace();
           System.err.println("Unsupported arguments. Please try again.");
         } catch (Exception e) {
-          e.printStackTrace();
+//          e.printStackTrace();
           System.err.println("Internal error. Please try again.");
         }
       }
