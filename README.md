@@ -4,16 +4,16 @@
 Start Central Server and affiliated servers:
 
 (default central port: 1200, default server ports: 1300, 1400, 1500, 1600, 1700):
-> java -jar CentralServer.jar ${CENTRAL_PORT} ${PORT1} ${PORT2} ${PORT3} ${PORT4} ${PORT5}
+> java -jar CentralServer.jar
 
 Start Client:
 
 (Please specify the name of current client, using as the directory name to store files)
 > java -jar Client.jar ${CLIENT_NAME}
 
+Start Admin:
 
-
-
+> java -jar Admin.jar
 
 ### Testing
 
