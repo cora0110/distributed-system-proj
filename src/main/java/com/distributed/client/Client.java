@@ -130,10 +130,10 @@ public class Client {
                     "  register USER PWD: to register a new account with username USER and password PWD\n" +
                     "  login USER PWD: to login using USER and PWD credentials\n" +
                     "  create DOC SEC: to create a new document named DOC and contains SEC sections\n" +
-                    "  edit DOC SEC:(TMP) to edit the section SEC of DOC document (using TMP temporary filename)\n" +
+                    "  edit DOC SEC (TMP): to edit the section SEC of DOC document (using TMP temporary filename)\n" +
                     "  endedit: to stop the current editing session\n" +
-                    "  showsec DOC SEC:(OUT) to download the content of the SEC section of DOC document (using OUT output filename)\n" +
-                    "  showdoc DOC:(OUT) to download the content concatenation of all the document's sections (using OUT output filename)\n" +
+                    "  showsec DOC SEC (OUT): to download the content of the SEC section of DOC document (using OUT output filename)\n" +
+                    "  showdoc DOC (OUT): to download the content concatenation of all the document's sections (using OUT output filename)\n" +
                     "  logout: to logout\n" +
                     "  list: to list all the documents you are able to see and edit\n" +
                     "  share USER DOC: to share a document with another user\n" +
