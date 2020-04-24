@@ -992,15 +992,14 @@ public class Server implements ServerInterface {
     } else {
       serverLogger.log(serverName, "Abort: sent");
       for (int peerPort : peers) {
-        //Boolean prepareAck = prepareResponseMap.get(transactionID).get(peerPort);
         if (prepareResponseMap.get(transactionID).get(peerPort) != null && prepareResponseMap.get(transactionID).get(peerPort)) {
           try {
             Registry registry = LocateRegistry.getRegistry(peerPort);
-            ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + currPort);
+            ServerInterface stub = (ServerInterface) registry.lookup(Server.class.getSimpleName() + peerPort);
             boolean commitAck = stub.receiveAbort(transactionID);
             commitResponseMap.get(transactionID).put(peerPort, commitAck);
           } catch (Exception e) {
-            serverLogger.log(serverName, "Exception: " + e.getMessage());
+            //serverLogger.log(serverName, "Exception: " + e.getMessage());
           }
         }
       }
