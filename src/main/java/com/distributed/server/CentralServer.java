@@ -4,17 +4,20 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
- * CentralServer.java
- * The central service that supports users logging on, adding or removing clients or servers, and other housekeeping tasks.
- * Assumption: the central server never fails.
- * @version  2020-4-21
+ * CentralServer.java The central service that supports users logging on, adding or removing clients
+ * or servers, and other housekeeping tasks. Assumption: the central server never fails.
+ *
+ * @version 2020-4-21
  */
 public class CentralServer extends UnicastRemoteObject implements CentralServerInterface {
   private String host;
@@ -25,13 +28,16 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   // 0 -> empty, 1 -> busy, 2 -> die
   private Map<Integer, Integer> serverStatus;
 
-  //TODO check serverPorts.length > 1 in main
+  private static final int DEFAULT_CENTRAL_PORT = 1200;
+  private static final int[] DEFAULT_SERVER_PORTS = new int[]{1300, 1400, 1500, 1600, 1700};
+
 
   /**
    * Constructor
-   * @param host  ip
-   * @param currPort  port# for central server
-   * @param serverPorts  port# for servers
+   *
+   * @param host        ip
+   * @param currPort    port# for central server
+   * @param serverPorts port# for servers
    * @throws RemoteException
    */
   public CentralServer(String host, int currPort, int[] serverPorts) throws RemoteException {
@@ -53,9 +59,19 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
   }
 
   public static void main(String[] args) throws Exception {
-    Logger rmiioLogger = Logger.getLogger( "com.healthmarketscience.rmiio" );
+    Logger rmiioLogger = Logger.getLogger("com.healthmarketscience.rmiio");
     rmiioLogger.setLevel(Level.SEVERE);
-    CentralServer centralServer = new CentralServer("127.0.0.1", 1200, new int[]{1300, 1400, 1500, 1600, 1700});
+    if (args.length < 2) {
+      System.err.println("Not specify at least one central port and one server port.");
+      System.out.println("Using default central port: " + DEFAULT_CENTRAL_PORT + ". Server ports: " + Arrays.toString(DEFAULT_SERVER_PORTS));
+      CentralServer centralServer = new CentralServer("127.0.0.1", DEFAULT_CENTRAL_PORT, DEFAULT_SERVER_PORTS);
+      return;
+    } else {
+      List<Integer> ports = Arrays.stream(args).map(Integer::parseInt).collect(Collectors.toList());
+      List<Integer> serverPortsList = ports.subList(1, ports.size());
+      int[] serverPorts = serverPortsList.stream().mapToInt(i -> i).toArray();
+      CentralServer centralServer = new CentralServer("127.0.0.1", ports.get(0), serverPorts);
+    }
   }
 
   /**
@@ -85,6 +101,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Kill a slave server and update serverStatus
+   *
    * @param slaveServerPort port
    */
   @Override
@@ -101,12 +118,13 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Restart a slave server: assign a live server as helper to help the server restart.
+   *
    * @param slaveServerPort port# for the restarting server
    * @throws RemoteException
    */
   @Override
   public void restartSlaveServer(int slaveServerPort) throws RemoteException {
-    if(serverStatus.get(slaveServerPort) != 2) return;
+    if (serverStatus.get(slaveServerPort) != 2) return;
     Server server = new Server(slaveServerPort, centralPort);
     ServerInterface stub = (ServerInterface) UnicastRemoteObject.exportObject(server, 0);
     Registry registry = LocateRegistry.getRegistry(slaveServerPort);
@@ -117,7 +135,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
       if (getServerStatus(serverPort) == 0) {
         try {
           serverLogger.log(centralName, "Assign Server" + serverPort +
-                  " to help Server " + slaveServerPort + " recover data." );
+                  " to help Server " + slaveServerPort + " recover data.");
           registry = LocateRegistry.getRegistry(serverPort);
           ServerInterface aliveServer = (ServerInterface) registry.lookup("Server" + serverPort);
           aliveServer.helpRecoverData(slaveServerPort);
@@ -135,6 +153,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Get the server status
+   *
    * @param port server port #
    * @return 0 -> empty, 1 -> busy, 2 -> dead, -1 -> Not found
    * @throws RemoteException
@@ -147,8 +166,9 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Set server status as input
-   * @param port  server port #
-   * @param status  0 -> empty, 1 -> busy, 2 -> dead
+   *
+   * @param port   server port #
+   * @param status 0 -> empty, 1 -> busy, 2 -> dead
    * @throws RemoteException
    */
   @Override
@@ -158,6 +178,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Receive notification from servers
+   *
    * @param message msg from servers
    * @throws RemoteException
    */
@@ -169,6 +190,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * Get all peers (regardless of the server status) to the server from toPort
+   *
    * @param toPort input port number
    * @return list of peer port numbers
    * @throws RemoteException
@@ -187,6 +209,7 @@ public class CentralServer extends UnicastRemoteObject implements CentralServerI
 
   /**
    * generate a random number from 0 to n
+   *
    * @param n
    * @return a random number from 0 to n
    */

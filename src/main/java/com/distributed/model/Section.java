@@ -22,7 +22,6 @@ public class Section implements Serializable {
     lock = new ReentrantLock();
   }
 
-  // TODO: 4/14/20  
   public boolean occupy(User user) {
     if (lock.tryLock()) {
       if (this.occupant == null) {
