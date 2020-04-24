@@ -1,7 +1,7 @@
 ## distributed-system-final-project
 
 ###Getting Started
-Start Central Server and affiliated servers
+Start Central Server and affiliated servers:
 
 (default central port: 1200, default server ports: 1300, 1400, 1500, 1600, 1700):
 > java -jar CentralServer.jar ${CENTRAL_PORT} ${PORT1} ${PORT2} ${PORT3} ${PORT4} ${PORT5}
