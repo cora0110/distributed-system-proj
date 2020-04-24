@@ -903,8 +903,8 @@ public class Server implements ServerInterface {
     while (retry > 0) {
       if (retry < 3) {
         try {
-          // pause for 1 secs
-          Thread.sleep(1000);
+          // pause for 0.5 secs
+          Thread.sleep(300);
         } catch (InterruptedException e) {
           serverLogger.log(serverName, e.getMessage());
         }
@@ -1011,8 +1011,7 @@ public class Server implements ServerInterface {
     while (retry > 0) {
       if (retry < 3) {
         try {
-          // pause for 2 secs
-          Thread.sleep(1000);
+          Thread.sleep(300);
         } catch (InterruptedException e) {
           serverLogger.log(serverName, e.getMessage());
         }
